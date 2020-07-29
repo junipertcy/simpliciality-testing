@@ -3,9 +3,35 @@ import numpy as np
 from collections import defaultdict
 import random
 from copy import deepcopy
+from math import comb
+import time
+import sys
 
 
-class SimplicialTest(object):
+class SimplexRegistrar(object):
+    def __init__(self):
+        self.pointer = 0
+        self.name2id = dict()
+        self.id2name = dict()
+        self.facet_sizes = np.array([], dtype=np.int_)
+
+        self.logbook = dict()
+        pass
+
+    def register(self, name):
+        name = tuple(sorted(name, reverse=True))
+        if name not in self.name2id:
+            self.name2id[name] = self.pointer
+            self.id2name[self.pointer] = name
+            self.pointer += 1
+            self.facet_sizes = np.append(self.facet_sizes, [len(name)])
+        return name, self.name2id[name]
+
+    def log_forbidden(self, name):
+        self.logbook[tuple(name)] = False
+
+
+class SimplicialTest(SimplexRegistrar):
     """Base class for SimplicialCheck.
 
     Parameters
@@ -17,13 +43,12 @@ class SimplicialTest(object):
     """
 
     def __init__(self, degree_list, size_list):
-        # random.seed(42)
+        super().__init__()
+        self.random_seed = time.thread_time_ns()
+        random.seed(self.random_seed)
+
         self.size_list = size_list
-        self.degree_list = degree_list
-        self.facet2id = defaultdict(int)
-        self.id2facet = defaultdict(tuple)
-        self.available_facets = defaultdict(dict)
-        self.vertex_id = defaultdict(int)
+        self.degree_list = np.array(degree_list, dtype=np.int_)
         self.logbook = defaultdict(dict)
 
         self.m = len(size_list)
@@ -35,137 +60,212 @@ class SimplicialTest(object):
         self._sorted_d = deepcopy(self.sorted_d)
 
         self.deg_seq = np.zeros(self.n, dtype=np.int_)
-        self.init_all_simplices()
-        self.init_vertex_id()
         self.symmetry_breaker = None
         self.identifier = None
+
+        self._backtrack_steps = 0
+        self._global_hit_wall = 0
+
         pass
 
-    def init_all_simplices(self):
-        simplices = dict()
-        all_simplices = []
-        for m_ in range(self.m):
-            simplices[m_] = list(map(tuple, combinations(range(self.n), m_ + 1)))
-            all_simplices += simplices[m_]
-        for _id, simplex in enumerate(all_simplices):
-            self.facet2id[simplex] = _id
-        self.id2facet = {v: k for k, v in self.facet2id.items()}
-        self.available_facets[tuple()] = simplices
-
-    def init_vertex_id(self):
-
-        for _id in range(self.n):
-            self.vertex_id[_id] = _id
-
-    def fill_up_deg_seq(self, facet):
+    def update_deg_seq(self, facet, value):
+        if value not in [+1, -1]:
+            raise NotImplementedError
         for _ in facet:
-            self.deg_seq[_] += 1
+            self.deg_seq[_] += value
 
-    def resume_deg_seq(self, facet):
-        for _ in facet:
-            self.deg_seq[_] -= 1
+    def checkpoint_1(self):
+        return np.all(np.sort(self.degree_list) - np.sort(self.deg_seq) >= 0)
 
-    def deg_checks(self):
-        # check 1
-        if max(self.degree_list) < max(self.deg_seq):
-            return False
-        else:
-            return True
+    def _break_symmetry(self):
+        m = self.sorted_s.pop(0)
+        picked_facet, picked_facet_id = self.register(random.sample(range(self.n), k=m))
 
-    def remove_inclusive_facets(self, facet, old_identifier, new_identifier):
-        m = len(facet)
-        facets = self.available_facets[old_identifier]
-        self.available_facets[new_identifier] = defaultdict(dict)
-        for m_ in range(m):
-            self.available_facets[new_identifier][m_] = [i for i in facets[m_] if i not in combinations(facet, m_ + 1)]
-
-    def write_to_available_facets(self, identifier):
-        self.available_facets[tuple(identifier)]["sorted_deg_seq"] = sorted(self.deg_seq, reverse=True)
-        self.available_facets[tuple(identifier)]["sorted_size_seq"] = sorted(
-            [len(self.id2facet[_id]) for _id in identifier],
-            reverse=True)
-        self.available_facets[tuple(identifier)]["chosen"] = list()
-        for _id in identifier:
-            self.available_facets[tuple(identifier)]["chosen"] += [self.id2facet[_id]]
-
-    def write_to_logbook(self, identifier):
-        if self.logbook[tuple(identifier)] != {"is_simplicial": False}:
-            for key in self.available_facets[tuple(identifier)]:
-                if key not in ["sorted_deg_seq", "sorted_size_seq", "chosen", "why-explore-more"]:
-                    self.logbook[tuple(identifier)][key] = list()
-                    for facet in self.available_facets[tuple(identifier)][key]:
-                        self.logbook[tuple(identifier)][key] += [self.facet2id[facet]]
-
-    def _reduce_pool(self, identifier, facets_pool):
-        _pool = []
-        for facet in facets_pool:
-            if not self.logbook[tuple(identifier + [self.facet2id[facet]])] == {"is_simplicial": False}:
-                _pool += [facet]
-        return _pool
-
-    def _break_symmetry(self, s):
-        picked_facet = random.choice(self.available_facets[tuple([])][s - 1])
-        picked_facet_id = self.facet2id[picked_facet]
-        self.fill_up_deg_seq(picked_facet)
+        self.update_deg_seq(picked_facet, +1)
         identifier = [picked_facet_id]
-        self.symmetry_breaker = picked_facet_id
-        self.remove_inclusive_facets(picked_facet, tuple([]), tuple(identifier))
-        self.write_to_available_facets(identifier)
+        self.symmetry_breaker = 0  # used to check if the routine ends
         return identifier
+
+    def ensure_valid_draw(self, identifier, size):
+        """
+        This function ensures that our choice of facet is valid (not inclusive of any larger exisiting facet) and
+        is potentially a good one (not explored).
+
+        Parameters
+        ----------
+        identifier
+        size
+
+        Returns
+        -------
+
+        """
+
+
+
+        pass
+
+    def sample_simplex(self, identifier, size):
+        """
+
+        Parameters
+        ----------
+        identifier
+        size
+
+        Returns
+        -------
+
+        """
+        # TODO: Fix things here!
+        explored_but_forbidden_ids = []
+        explored_but_forbidden_ids = [k[len(identifier):][0] for k in self.logbook.keys() if
+                                      len(k[len(identifier):]) == 1]
+        larger_selected_simplex_ids = [index for index, i in enumerate(self.facet_sizes) if
+                                       (index in identifier and i >= size) or index in explored_but_forbidden_ids]
+        larger_selected_simplex_ids = [index for index, i in enumerate(self.facet_sizes) if (index in identifier and i >= size)]
+
+        set_of_vertices = set(range(self.n))
+        picked_facet, picked_facet_id = self.register(random.sample(list(set_of_vertices), k=size))
+        qualified_draw = False
+        _ = 0  # I think this is stupid.... but let's try this for now...
+        while not qualified_draw:
+            qualified_draw = True
+            for _id in larger_selected_simplex_ids:
+                if set(picked_facet).issubset(set(self.id2name[_id])):
+                    self.log_forbidden(identifier + [picked_facet_id])
+                    aaa = tuple(list(identifier) + [picked_facet_id])
+                    picked_facet, picked_facet_id = self.register(random.sample(list(set_of_vertices), k=size))
+                    qualified_draw = False
+                    _ += 1
+                    break
+            if _ > 10:
+
+                self._global_hit_wall += 1
+                if self._global_hit_wall > 10:
+                    self._global_hit_wall = 0
+                    self._backtrack_steps = 2
+                else:
+                    self._backtrack_steps = 1
+                return list(), -1
+
+        [set_of_vertices.remove(i) for i in picked_facet]
+        if len(set_of_vertices) < size:
+            # This is an impossible path
+            self.log_forbidden(identifier)
+
+            self._backtrack_steps = 1
+            return list(), -1
+
+        pool = set()
+        pool_size = comb(len(set_of_vertices), size)
+        already_in_identifier = 0
+        while picked_facet_id in identifier or tuple(identifier + [picked_facet_id]) in self.logbook:
+            picked_facet, picked_facet_id = self.register(random.sample(list(set_of_vertices), k=size))
+            pool.add(tuple(identifier + [picked_facet_id]))
+            if len(pool) == pool_size - already_in_identifier:
+                self._backtrack_steps = 1
+                return list(), -1
+
+        # print(f"WE HAVE CHOSEN, IN SAMPLE_SIMPLEX, {picked_facet, picked_facet_id}")
+        return picked_facet, picked_facet_id
 
     def is_simplicial(self):
         if max(self.degree_list) > self.m:
-            print("1. This can never be simplicial.")
+            print("1. This can never be simplicial.")  # TODO.... why??
             return False
-        identifier = self._break_symmetry(self.sorted_s.pop(0))
+        if np.sum(self.degree_list) != np.sum(self.size_list):
+            print("2. This can never be simplicial.")
+            return False
+
+        identifier = self._break_symmetry()
+        if len(self.sorted_s) == 0:
+            if sorted(self.deg_seq, reverse=True) == self._sorted_d:  # TODO: start from identifier
+                self.identifier = identifier
+                return True
+            else:
+                return False
 
         while True:
-            self.write_to_logbook(identifier)
             s = self.sorted_s.pop(0)
-            # This facets_pool contains facets that we are supposed to draw from...
-            facets_pool = deepcopy(self.available_facets[tuple(identifier)][s - 1])
-
-            # but we do not need to explore cases that lead to "impossible" combinations
-            facets_pool = self._reduce_pool(identifier, facets_pool)
-            if len(facets_pool) == 0:
+            picked_facet, picked_facet_id = self.sample_simplex(identifier, s)
+            if len(picked_facet) == 0:
                 if identifier == [self.symmetry_breaker]:
                     return False
-                self.logbook[tuple(identifier)] = {"is_simplicial": False}  # marking impossible facet combinations
                 self.sorted_s = [s] + self.sorted_s
-
-                unwanted_facet = self.id2facet[identifier.pop(-1)]
+                unwanted_facet = self.id2name[identifier.pop(-1)]
                 self.sorted_s = [len(unwanted_facet)] + self.sorted_s
-                self.resume_deg_seq(unwanted_facet)
+                self.update_deg_seq(unwanted_facet, -1)
+                if self._backtrack_steps == 2:
+                    unwanted_facet = self.id2name[identifier.pop(-1)]
+                    self.sorted_s = [len(unwanted_facet)] + self.sorted_s
+                    self.update_deg_seq(unwanted_facet, -1)
+                    unwanted_facet = self.id2name[identifier.pop(-1)]
+                    self.sorted_s = [len(unwanted_facet)] + self.sorted_s
+                    self.update_deg_seq(unwanted_facet, -1)
                 continue
-            picked_facet = random.choice(facets_pool)
-            picked_facet_id = self.facet2id[picked_facet]
-            self.fill_up_deg_seq(picked_facet)
-            if self.deg_checks():
-                old_identifier = deepcopy(identifier)
+
+            self.update_deg_seq(picked_facet, +1)
+
+            if self.checkpoint_1():
                 identifier += [picked_facet_id]
-                self.remove_inclusive_facets(picked_facet, tuple(old_identifier), tuple(identifier))
-                self.write_to_available_facets(identifier)
             else:
                 # Backtrack
-                self.available_facets[tuple(identifier)][
-                    "why-explore-more"] = f"deg_checks not passed if choosing {picked_facet_id}: {picked_facet}"
-                self.logbook[tuple(identifier + [picked_facet_id])] = {"is_simplicial": False}  # marking impossible facet combinations
-                self.resume_deg_seq(picked_facet)
-                self.sorted_s.insert(0, len(self.id2facet[picked_facet_id]))
+                self.log_forbidden(tuple(list(identifier) + [picked_facet_id]))
+                aaa = tuple(list(identifier) + [picked_facet_id])
+                self.update_deg_seq(picked_facet, -1)
+                self.sorted_s.insert(0, len(self.id2name[picked_facet_id]))
                 continue
 
             # Here, assuming our algorithm is all good, we want to check if we indeed find the simplicial complex
             if len(self.sorted_s) == 0:
-                if self.available_facets[tuple(identifier)]["sorted_deg_seq"] == self._sorted_d and \
-                        self.available_facets[tuple(identifier)]["sorted_size_seq"] == self._sorted_s:
+                if sorted(self.deg_seq, reverse=True) == self._sorted_d:  # TODO: start from identifier
                     self.identifier = identifier
                     return True
                 else:
                     # Backtrack
-                    self.available_facets[tuple(identifier)][
-                        "why-explore-more"] = "depleted sorted_s, but simplicial complex not found."
-                    self.logbook[tuple(identifier)] = {"is_simplicial": False}  # marking impossible facet combinations
-                    last_facet = self.id2facet[identifier.pop(-1)]
+                    self.log_forbidden(identifier)
+                    last_facet = self.id2name[identifier.pop(-1)]
+
                     self.sorted_s = [len(last_facet)] + self.sorted_s
-                    self.resume_deg_seq(last_facet)
+                    self.update_deg_seq(last_facet, -1)
         return False
+
+    def count_explored_branches(self, identifier):
+        s = set()
+        for _ in self.logbook.keys():
+            try:
+                s.add(_[len(identifier) + 1])
+            except IndexError:
+                pass
+        return len(s)
+
+    def compute_joint_seq(self):
+        degs = np.zeros(self.n, dtype=np.int_)
+        sizes = []
+
+        for _id in self.identifier:
+            sizes += [len(self.id2name[_id])]
+            for vertex_id in self.id2name[_id]:
+                degs[vertex_id] += 1
+        return sorted(sizes, reverse=True), sorted(degs, reverse=True)
+
+    def compute_joint_seq_from_identifier(self, identifier, sorted_deg=True):
+        degs = np.zeros(self.n, dtype=np.int_)
+        sizes = []
+
+        for _id in identifier:
+            sizes += [len(self.id2name[_id])]
+            for vertex_id in self.id2name[_id]:
+                degs[vertex_id] += 1
+
+        if sorted_deg:
+            return sorted(sizes, reverse=True), sorted(degs, reverse=True)
+        else:
+            return sorted(sizes, reverse=True), degs
+
+    def identifier2facets(self, identifier):
+        facets = []
+        for _id in identifier:
+            facets += [self.id2name[_id]]
+        return facets

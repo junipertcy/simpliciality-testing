@@ -12,7 +12,7 @@ def is_simplicial(degree_sequence, size_sequence):
     result = st.is_simplicial()
     if result is True:
         print("Yes, it forms a simplicial complex.")
-        print(st.available_facets[tuple(st.identifier)])
+        print(st.identifier2facets(st.identifier))
     else:
         print("No, it cannot form a simplicial complex.")
 
