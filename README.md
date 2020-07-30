@@ -10,7 +10,7 @@ pip install -r requirements.txt
 
 Now, try:
 ```python
-python is_simplicial.py degs.txt sizes.txt
+python is_simplicial.py -k degs.txt -s sizes.txt
 ```
 
 It should tell you that the joint degree sequence defined by `degs.txt` & `sizes.txt` is simplicial! 
