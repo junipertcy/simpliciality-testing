@@ -35,6 +35,25 @@ class SimplexRegistrar(object):
         }
 
 
+def prune_ones(size_list, degree_list):
+    _1 = count_summary(size_list)[1]
+    _2 = count_summary(degree_list)[1]
+    if _1 > _2:
+        print("Too many 0-simplices. We cannot satisfy the inclusive constraint.")
+    else:
+        for _ in range(_1):
+            size_list.remove(1)
+            degree_list.remove(1)
+    return size_list, degree_list
+
+
+def count_summary(seq):
+    d = defaultdict(int)
+    for s in seq:
+        d[s] += 1
+    return d
+
+
 class SimplicialTest(SimplexRegistrar):
     """Base class for SimplicialCheck.
 
@@ -80,12 +99,15 @@ class SimplicialTest(SimplexRegistrar):
     def checkpoint_1(self):
         return np.all(np.sort(self.degree_list) - np.sort(self.deg_seq) >= 0)
 
-    def _break_symmetry(self):
+    def _break_symmetry(self, greedy=False, forward=True):
         m = self.sorted_s.pop(0)
-        picked_facet, picked_facet_id = self.register(random.sample(range(self.n), k=m))
+        if greedy:
+            picked_facet, picked_facet_id = self.sample_simplex_greedy([], m, forward=forward)
+        else:
+            picked_facet, picked_facet_id = self.register(random.sample(range(self.n), k=m))
         self.update_deg_seq(picked_facet, +1)
         identifier = [picked_facet_id]
-        self.symmetry_breaker = picked_facet_id  # Actually, `picked_facet_id` is always 0 here.
+        self.symmetry_breaker = picked_facet_id
         return identifier
 
     def ensure_valid_draw(self, identifier, size):
@@ -105,25 +127,70 @@ class SimplicialTest(SimplexRegistrar):
 
         pass
 
-    @staticmethod
-    def count_summary(seq):
-        d = defaultdict(int)
-        for s in seq:
-            d[s] += 1
-        return d
+    def sample_simplex_greedy(self, identifier, size, forward=True):
+        deg = self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
+        larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
 
-    def sample_simplex(self, identifier, size):
+        candidate_facet = []
+
+        if forward:
+            shift = 0
+            while len(candidate_facet) < size:
+                if shift >= self.n:
+                    print("This sequence may not be simplicial.")
+                    raise NotImplementedError
+
+                # print(candidate_facet, shift)
+                if len(candidate_facet) == size - 1:  # the last vertex to choose
+                    for _id in larger_selected_simplex_ids:
+                        while set(candidate_facet + [shift]).issubset(set(self.id2name[_id])):
+                            shift += 1
+                            continue
+                # print(deg, self._sorted_d, shift, candidate_facet)
+                if deg[shift] + 1 <= self._sorted_d[shift]:
+                    candidate_facet += [shift]
+                shift += 1
+        else:
+            shift = self.n - 1
+            while len(candidate_facet) < size:
+                if shift < 0:
+                    print("This sequence may not be simplicial.")
+                    raise NotImplementedError
+
+                # print(candidate_facet, shift)
+                if len(candidate_facet) == size - 1:  # the last vertex to choose
+                    for _id in larger_selected_simplex_ids:
+                        while set(candidate_facet + [shift]).issubset(set(self.id2name[_id])):
+                            shift -= 1
+                            continue
+                # print(deg, self._sorted_d, shift, candidate_facet)
+                if deg[shift] + 1 <= self._sorted_d[shift]:
+                    candidate_facet += [shift]
+                shift -= 1
+        picked_facet, picked_facet_id = self.register(candidate_facet)
+        # print(picked_facet, picked_facet_id)
+        return picked_facet, picked_facet_id
+
+    def get_selected_facet_ids(self, identifier, size):
+        return [index for index, i in enumerate(self.facet_size_per_id) if (index in identifier and i >= size)]
+
+    def sample_simplex(self, identifier, size, greedy=False, forward=True):
         """
 
         Parameters
         ----------
         identifier
         size
+        greedy
+        forward
 
         Returns
         -------
 
         """
+        if greedy:
+            return self.sample_simplex_greedy(identifier, size, forward=forward)
+
         # Here, we have a good criterion! We may not need to explore further if...
         deg_sequence = np.array(self.compute_joint_seq_from_identifier(identifier)[1])
         deg_sequence_goal = self._sorted_d
@@ -136,8 +203,7 @@ class SimplicialTest(SimplexRegistrar):
             self._backtrack_steps = 1
             return list(), -1
 
-        larger_selected_simplex_ids = [index for index, i in enumerate(self.facet_size_per_id) if
-                                       (index in identifier and i >= size)]
+        larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
 
         set_of_vertices = set(range(self.n))
         picked_facet, picked_facet_id = self.register(random.sample(list(set_of_vertices), k=size))
@@ -168,7 +234,7 @@ class SimplicialTest(SimplexRegistrar):
 
         return picked_facet, picked_facet_id
 
-    def is_simplicial(self):
+    def is_simplicial(self, greedy=False, forward=True):
         if max(self.degree_list) > self.m:
             print("1. This can never be simplicial.")  # TODO.... why??
             return False
@@ -180,7 +246,7 @@ class SimplicialTest(SimplexRegistrar):
             return False
         # TODO: there is a second part of the GR criterion, which is not coded yet.
 
-        identifier = self._break_symmetry()
+        identifier = self._break_symmetry(greedy=greedy, forward=forward)
         if len(self.sorted_s) == 0:
             if sorted(self.deg_seq, reverse=True) == self._sorted_d:  # TODO: start from identifier
                 self.identifier = identifier
@@ -192,7 +258,7 @@ class SimplicialTest(SimplexRegistrar):
             if len(self.logbook) == self._len_logbook:
                 self._counter += 1
             s = self.sorted_s.pop(0)
-            picked_facet, picked_facet_id = self.sample_simplex(identifier, s)
+            picked_facet, picked_facet_id = self.sample_simplex(identifier, s, greedy=greedy, forward=forward)
             if len(picked_facet) == 0:
                 self.sorted_s = [s] + self.sorted_s
                 self._pull_the_plug(identifier, self._backtrack_steps)

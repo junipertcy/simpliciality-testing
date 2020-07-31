@@ -1,15 +1,19 @@
 import click
-from SimplicialTest import SimplicialTest
+from SimplicialTest import *
 
 
 @click.command()
 @click.option('-k', '--degree_seq_file', 'degree_sequence', type=click.File('r'), help='Path to degree sequence file.')
 @click.option('-s', '--size_seq_file', 'size_sequence', type=click.File('r'), help='Path to size sequence file.')
-def is_simplicial(degree_sequence, size_sequence):
+@click.option('--greedy/--no-greedy', default=False, help='Enable the Havel–Hakimi-type recursive algorithm.')
+@click.option('--forward/--no-forward', default=True,
+              help='[works only when greedy is on] Direction of the recursive algorithm.')
+def is_simplicial(degree_sequence, size_sequence, greedy, forward):
     degree_sequence = list(map(int, degree_sequence.read().replace("\n", "").split(" ")))
     size_sequence = list(map(int, size_sequence.read().replace("\n", "").split(" ")))
+    size_sequence, degree_sequence = prune_ones(size_sequence, degree_sequence)
     st = SimplicialTest(degree_sequence, size_sequence)
-    result = st.is_simplicial()
+    result = st.is_simplicial(greedy=greedy, forward=forward)
     if result is True:
         print(f"Yes, the joint sequence is simplicial. \nThe complex is: {st.identifier2facets(st.identifier)}")
     else:
