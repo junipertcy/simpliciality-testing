@@ -87,7 +87,6 @@ class SimplicialTest(SimplexRegistrar):
         self.deg_seq = np.zeros(self.n, dtype=np.int_)
         self.symmetry_breaker = None
         self.identifier = None
-        self.forward = None
 
         self._backtrack_steps = 0
         self._counter = 0
@@ -102,11 +101,12 @@ class SimplicialTest(SimplexRegistrar):
     def checkpoint_1(self):
         return np.all(np.sort(self.degree_list) - np.sort(self.deg_seq) >= 0)
 
-    def _break_symmetry(self, greedy=False, special=False):
-        if special:
-            m = self.sorted_s.pop(-1)
-        else:
-            m = self.sorted_s.pop(0)
+    def checkpoint_2(self, identifier):
+        """Obsolete"""
+        return np.any(self.get_available_slots(identifier) > self.m - len(identifier))
+
+    def _break_symmetry(self, greedy=False):
+        m = self.sorted_s.pop(0)
         if greedy:
             picked_facet, picked_facet_id = self.sample_simplex_greedy([], m)
         else:
@@ -133,41 +133,8 @@ class SimplicialTest(SimplexRegistrar):
 
         pass
 
-    def _forward_greedy(self, identifier, size):
-        deg = self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
-        larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
-        candidate_facet = []
-        shift = 0
-        while len(candidate_facet) < size:
-            if shift >= self.n:
-                raise NotImplementedError("Not solvable with greedy::forward strategy.")
-            if len(candidate_facet) == size - 1:  # the last vertex
-                # This part may look overly complicated, but the main goal is,
-                # rather than finding the vertex_id to be added to the `candidate_facet` while avoiding inclusion,
-                # we want to pick the vertex_id that has a higher vacancy first.
-                vacancy_per_vertex = self._sorted_d - self.deg_seq
-                sorted_vpv = vacancy_per_vertex[shift:].argsort()  # previous indices do not count
-                shift_ = 1
-                for _id in larger_selected_simplex_ids:
-                    while set(candidate_facet + [shift + sorted_vpv[-shift_]]).issubset(set(self.id2name[_id])):
-                        shift_ += 1
-                        if shift_ > len(sorted_vpv):
-                            raise NotImplementedError("Not solvable with greedy::forward strategy.")
-                        continue
-                if len(identifier) == 0:
-                    while np.sum([self._sorted_d[_] for _ in range(self.n) if
-                                  _ not in set(candidate_facet + [shift + sorted_vpv[-shift_]])]) < self.m - 1:
-                        shift_ += 1
-                        continue
-
-                shift += sorted_vpv[-shift_]
-
-            if deg[shift] + 1 <= self._sorted_d[shift]:
-                candidate_facet += [shift]
-            shift += 1
-        return candidate_facet
-
     def _backward_greedy(self, identifier, size):
+        """Obsolete"""
         deg = self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
         larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
         candidate_facet = []
@@ -212,35 +179,55 @@ class SimplicialTest(SimplexRegistrar):
 
         return
 
-    def sample_simplex_greedy(self, identifier, size, forward=True, special=False):
-        if special:
-            self.forward = "special"
-            return self.sample_simplex_greedy_special(identifier, size)
+    def sample_simplex_greedy(self, identifier, size):
+
+        deg = self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
+        larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
 
         if len(identifier) == 0:
-            _min = min(self._sorted_d[size:].sum(), self._sorted_d[:(self.n - size)].sum())
-            _max = min(self._sorted_d[size:].sum(), self._sorted_d[:(self.n - size)].sum())
-            if self._sorted_d[size:].sum() == _min and _min >= self.m - 1:  # choose forward
-                self.forward = True
-            elif _max < self.m - 1:  # choose backward
-                self.forward = False
-            else:
-                print(f"Unknown case: sorted_s = {self._sorted_s}, sorted_d: {self._sorted_d}")
+            candidate_facet = [_ for _ in range(size)]
+            pivot = 1
+            # print(f"initial candidate_facet: {candidate_facet}")
+            # print(f"initial pivot: {pivot}")
+            while np.sum([self._sorted_d[_] for _ in range(self.n) if _ not in set(candidate_facet)]) < self.m - 1:
+                while candidate_facet != [self.n - 1 - size + _ for _ in range(self.n - 1 - size)]:
+                    last = candidate_facet.pop(-pivot)
+                    if last < self.n - pivot:
+                        last += 1
+                    candidate_facet.insert(len(candidate_facet) - pivot + 1, last)
+                    # print(f"candidate_facet now becomes: {candidate_facet}")
+                    if last == self.n - pivot:
+                        pivot += 1
+                        # print(f"pivot now becomes: {pivot}")
+                    break
+            picked_facet, picked_facet_id = self.register(candidate_facet)
+            return picked_facet, picked_facet_id
 
-        if self.forward is not None:
-            forward = self.forward
+        candidate_facet = []
+        shift = 0
+        while len(candidate_facet) < size:
+            if shift >= self.n:
+                raise NotImplementedError("Not solvable with the greedy strategy.")
+            if len(candidate_facet) == size - 1:  # the last vertex
+                # This part may look overly complicated, but the main goal is,
+                # rather than finding the vertex_id to be added to the `candidate_facet` while avoiding inclusion,
+                # we want to pick the vertex_id that has a higher vacancy first.
+                vacancy_per_vertex = self._sorted_d - self.deg_seq
+                sorted_vpv = vacancy_per_vertex[shift:].argsort()  # previous indices do not count
+                shift_ = 1
 
-        if forward:
-            candidate_facet = self._forward_greedy(identifier, size)
-        else:
-            candidate_facet = self._backward_greedy(identifier, size)
+                for _id in larger_selected_simplex_ids:
+                    while set(candidate_facet + [shift + sorted_vpv[-shift_]]).issubset(set(self.id2name[_id])):
+                        shift_ += 1
+                        if shift_ > len(sorted_vpv):
+                            raise NotImplementedError("Not solvable with the greedy strategy.")
+                        continue
+                shift += sorted_vpv[-shift_]
+            if deg[shift] + 1 <= self._sorted_d[shift]:
+                candidate_facet += [shift]
+            shift += 1
 
         picked_facet, picked_facet_id = self.register(candidate_facet)
-        # print(picked_facet, picked_facet_id)
-
-        if np.any(self.get_available_slots(identifier + [picked_facet_id]) > self.m - (len(identifier) + 1)):
-            self.forward = not self.forward
-            return self.sample_simplex_greedy(identifier, size)
         return picked_facet, picked_facet_id
 
     def get_available_slots(self, identifier):
@@ -260,7 +247,7 @@ class SimplicialTest(SimplexRegistrar):
     def get_selected_facet_ids(self, identifier, size):
         return [index for index, i in enumerate(self.facet_size_per_id) if (index in identifier and i >= size)]
 
-    def sample_simplex(self, identifier, size, greedy=False, special=False):
+    def sample_simplex(self, identifier, size, greedy=False):
         """
 
         Parameters
@@ -268,14 +255,13 @@ class SimplicialTest(SimplexRegistrar):
         identifier
         size
         greedy
-        forward
 
         Returns
         -------
 
         """
         if greedy:
-            return self.sample_simplex_greedy(identifier, size, special=special)
+            return self.sample_simplex_greedy(identifier, size)
 
         # Here, we have a good criterion! We may not need to explore further if...
         deg_sequence = np.array(self.compute_joint_seq_from_identifier(identifier)[1])
@@ -320,7 +306,7 @@ class SimplicialTest(SimplexRegistrar):
 
         return picked_facet, picked_facet_id
 
-    def is_simplicial(self, greedy=False, special=False):
+    def is_simplicial(self, greedy=False):
         if max(self.degree_list) > self.m:
             print("1. This can never be simplicial.")  # TODO.... why??
             return False
@@ -332,7 +318,7 @@ class SimplicialTest(SimplexRegistrar):
             return False
         # TODO: there is a second part of the GR criterion, which is not coded yet.
 
-        identifier = self._break_symmetry(greedy=greedy, special=special)
+        identifier = self._break_symmetry(greedy=greedy)
         if len(self.sorted_s) == 0:
             if sorted(self.deg_seq, reverse=True) == self._sorted_d:  # TODO: start from identifier
                 self.identifier = identifier
@@ -343,11 +329,8 @@ class SimplicialTest(SimplexRegistrar):
         while self._counter < 1e4:
             if len(self.logbook) == self._len_logbook:
                 self._counter += 1
-            if special:
-                s = self.sorted_s.pop(-1)
-            else:
-                s = self.sorted_s.pop(0)
-            picked_facet, picked_facet_id = self.sample_simplex(identifier, s, greedy=greedy, special=special)
+            s = self.sorted_s.pop(0)
+            picked_facet, picked_facet_id = self.sample_simplex(identifier, s, greedy=greedy)
             if len(picked_facet) == 0:
                 self.sorted_s = [s] + self.sorted_s
                 self._pull_the_plug(identifier, self._backtrack_steps)
