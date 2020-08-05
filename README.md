@@ -34,11 +34,11 @@ The dataset is the [crime network dataset](https://github.com/jg-you/scm/blob/ma
 from the [Phys. Rev. E paper](https://doi.org/10.1103/PhysRevE.96.032312), having 551 nodes and 194 facets. 
 
 Moreover, we find that the greedy algorithm can go with two directions,
-and sometimes only the "backward direction" work.
+and sometimes only the "backward direction" work. (TODO: this section has to be re-written)
 
 For example,
 ```python
-python is_simplicial.py -k datasets/02_degs.txt -s datasets/02_sizes.txt --greedy --no-forward
+python is_simplicial.py -k datasets/02_degs.txt -s datasets/02_sizes.txt --greedy
 ``` 
 
 Interesting? I think it is!
