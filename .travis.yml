@@ -1,18 +1,23 @@
 language: python
+
 group: travis_latest
 
 git:
   depth: 25
   quiet: true
 
+python:
+  - "3.6"      # current default Python on Travis CI
+  - "3.7"
+  - "3.8"
+  - "3.8-dev"  # 3.8 development branch
+  - "nightly"  # nightly build
+
 matrix:
   include:
-    - name: "Python 3.7.1 on Xenial Linux"
-      python: 3.7           # this works for Linux but is ignored on macOS or Windows
+    - python: 3.7           # this works for Linux but is ignored on macOS or Windows
       env: RUN_TESTS="true"
-    - name: "Python 3.7.4 on macOS"
-      os: osx
-      osx_image: xcode11    # Python 3.7.4 running on macOS 10.14.4
+    - os: osx
       language: shell       # 'language: python' is an error on Travis CI macOS
       env: RUN_TESTS="true"
 
@@ -24,22 +29,11 @@ cache:
   - /home/travis/miniconda3
   - /home/travis/.cache/pip
 
-notifications:
-  email: false
-
-addons:
-  apt:
-    sources:
-      - llvm-toolchain-precise
-      - ubuntu-toolchain-r-test
-    packages:
-      - clang
-      - g++
-      - gcc
-
 before_install:
   - source build_tools/travis/install.sh
 
-install: bash scripts/install_requirements.sh
+install:
+  - bash scripts/install_requirements.sh
 
-script: bash build_tools/travis/test_script.sh
+script:
+  - bash build_tools/travis/test_script.sh
