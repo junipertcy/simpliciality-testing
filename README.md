@@ -1,5 +1,16 @@
 # simpliciality_test
 
+.. image:: https://img.shields.io/badge/contact-@oneofyen-blue.svg?style=flat
+   :target: https://twitter.com/oneofyen
+   :alt: Twitter: @oneofyen
+.. image:: https://img.shields.io/badge/license-GPL-green.svg?style=flat
+   :target: https://github.com/junipertcy/simpliciality_test/blob/master/LICENSE
+   :alt: License
+.. image:: https://travis-ci.org/junipertcy/simpliciality_test.svg?branch=master
+   :target: https://travis-ci.org/junipertcy/simpliciality_test
+   :alt: Build Status
+
+
 explore possible algorithms for simpliciality test
 
 ## Proof of concept
