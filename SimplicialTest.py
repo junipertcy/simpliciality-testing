@@ -1,9 +1,11 @@
 import numpy as np
 from collections import defaultdict
+from itertools import combinations
 import random
 from copy import deepcopy
 from math import comb
 import time
+from operator import itemgetter
 
 
 class SimplexRegistrar(object):
@@ -138,10 +140,6 @@ class SimplicialTest(SimplexRegistrar):
     def checkpoint_1(self):
         return np.all(np.sort(self.degree_list) - np.sort(self.deg_seq) >= 0)
 
-    def checkpoint_2(self, identifier):
-        """Obsolete"""
-        return np.any(self.get_available_slots(identifier) > self.m - len(identifier))
-
     def _break_symmetry(self, greedy=False):
         m = self.sorted_s.pop(0)
         if greedy:
@@ -152,54 +150,6 @@ class SimplicialTest(SimplexRegistrar):
         identifier = [picked_facet_id]
         self.symmetry_breaker = picked_facet_id
         return identifier
-
-    def ensure_valid_draw(self, identifier, size):
-        """
-        This function ensures that our choice of facet is valid (not inclusive of any larger exisiting facet) and
-        is potentially a good one (not explored).
-
-        Parameters
-        ----------
-        identifier
-        size
-
-        Returns
-        -------
-
-        """
-
-        pass
-
-    def _backward_greedy(self, identifier, size):
-        """Obsolete"""
-        deg = self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
-        larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
-        candidate_facet = []
-        shift = self.n - 1
-        while len(candidate_facet) < size:
-            if shift < 0:
-                raise NotImplementedError("Not solvable with greedy::backward strategy.")
-
-            if len(candidate_facet) == size - 1:  # the last vertex
-                vacancy_per_vertex = self._sorted_d - self.deg_seq
-                sorted_vpv = vacancy_per_vertex[:(shift + 1)].argsort()
-                shift_ = 1
-                for _id in larger_selected_simplex_ids:
-                    while set(candidate_facet + [sorted_vpv[-shift_]]).issubset(set(self.id2name[_id])):
-                        shift_ += 1
-                        if shift_ > len(sorted_vpv):
-                            raise NotImplementedError("Not solvable with greedy::backward strategy.")
-                        continue
-                if len(identifier) == 0:
-                    while np.sum([self._sorted_d[_] for _ in range(self.n) if
-                                  _ not in set(candidate_facet + [sorted_vpv[-shift_]])]) < self.m - 1:
-                        shift_ += 1
-                        continue
-                shift = sorted_vpv[-shift_]
-            if deg[shift] + 1 <= self._sorted_d[shift]:
-                candidate_facet += [shift]
-            shift -= 1
-        return candidate_facet
 
     def sample_icebreaker(self, size):
         """
@@ -214,6 +164,7 @@ class SimplicialTest(SimplexRegistrar):
         candidate_facet = [_ for _ in range(size)]
         pivot = 1
         while np.sum([self._sorted_d[_] for _ in range(self.n) if _ not in set(candidate_facet)]) < self.m - 1:
+            # actually... if it were a greater sign, it wouldn't work as well.
             while candidate_facet != [self.n - 1 - size + _ for _ in range(self.n - 1 - size)]:
                 last = candidate_facet.pop(-pivot)
                 if last < self.n - pivot:
@@ -225,46 +176,97 @@ class SimplicialTest(SimplexRegistrar):
         picked_facet, picked_facet_id = self.register(candidate_facet)
         return picked_facet, picked_facet_id
 
-    def sample_simplex_greedy(self, identifier, size, candidate_facet=None, shift=0):
+    @staticmethod
+    def borrow_from_non_shielding(shielding, non_shielding, m):
+        """
+
+        Parameters
+        ----------
+        shielding
+        non_shielding
+        m
+
+        Returns
+        -------
+
+        """
+        for _ in range(m):
+            shielding += [non_shielding.pop(0)]
+        return shielding, non_shielding
+
+    def prioritize(self, identifier):
+        s = count_summary(self.id2name[identifier[-1]])
+        shielding = []
+        non_shielding = []
+        for _ in range(self.n):
+            if self._sorted_d[_] - self.deg_seq[_] > 0:
+                if s[_] == 1:
+                    shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
+                else:
+                    non_shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
+
+        non_shielding = sorted(non_shielding, key=itemgetter(1), reverse=True)
+        shielding = sorted(shielding, key=itemgetter(2), reverse=True)
+
+        return shielding, non_shielding
+
+    @staticmethod
+    def get_valid_trails(shielding, non_shielding, size):
+        n_shielding = len(shielding)
+        n_non_shielding = len(non_shielding)
+        n_ = n_shielding + n_non_shielding
+        valid_trials = iter(_ for _ in combinations(range(n_), size) if not set(_).issubset(set(range(n_shielding))))
+        return valid_trials
+
+    def sample_simplex_greedy(self, identifier, size):
         if len(identifier) == 0:
             return self.sample_icebreaker(size)
 
-        deg = self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
         larger_selected_simplex_ids = self.get_selected_facet_ids(identifier, size)
-        remaining = self._sorted_d - self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
 
-        if candidate_facet is None:
-            candidate_facet = []
+        candidate_facet = []
+        shielding, non_shielding = self.prioritize(identifier)
+        options = shielding + non_shielding
+        valid_trials = self.get_valid_trails(shielding, non_shielding, size)
 
-        shift_lock = 0
-        while len(candidate_facet) < size:
-            if shift >= self.n:
-                raise NotImplementedError("Not solvable with the greedy strategy.")
-            if len(candidate_facet) == size - 1:  # the last vertex
-                shift_lock = shift
-                vacancy_per_vertex = self._sorted_d - self.deg_seq
-                sorted_vpv = vacancy_per_vertex[shift:].argsort()  # previous indices do not count
-                shift_ = 1
-                for _id in larger_selected_simplex_ids:
-                    while set(candidate_facet + [shift + sorted_vpv[-shift_]]).issubset(
-                            set(self.id2name[_id])) or np.sum([remaining[_] for _ in range(self.n) if _ not in set(
-                        candidate_facet + [shift + sorted_vpv[-shift_]])]) < self.m - len(identifier) - 1:
-                        shift_ += 1
-                        if shift_ > len(sorted_vpv):
-                            raise NotImplementedError("Not solvable with the greedy strategy.")
-                        continue
-                shift += sorted_vpv[-shift_]
-            if deg[shift] + 1 <= self._sorted_d[shift]:
-                candidate_facet += [shift]
-            shift += 1
+        non_stop = True
+        while non_stop:
+            non_stop = False
+            try:
+                candidate_facet = [options[_][0] for _ in next(valid_trials)]
+            except StopIteration:
+                raise NotImplementedError("May not be solvable with the greedy algorithm.")
+            for _id in larger_selected_simplex_ids:
+                _ = self.m - len(identifier) - 1
+                cond_1 = set(candidate_facet).issubset(set(self.id2name[_id]))
+                cond_2 = np.any(self.get_remaining_slots(identifier, candidate_facet) > _)
+                cond_3 = np.sum(self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)) < _
+                if cond_1 or cond_2 or cond_3:
+                    non_stop = True
+                    break
+
         picked_facet, picked_facet_id = self.register(candidate_facet)
-
-        # TODO: this part needs work. Not simple enough.
-        _remaining = np.array([remaining[_] - 1 if _ in set(candidate_facet) else remaining[_] for _ in range(self.n)])
-        if np.sum(_remaining) > 1 and np.any(_remaining > self.m - len(identifier) - 1):
-            candidate_facet.pop(-2)
-            return self.sample_simplex_greedy(identifier, size, candidate_facet=candidate_facet, shift=shift_lock)
         return picked_facet, picked_facet_id
+
+    def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
+        """
+        Used in the greedy case only.
+
+        Parameters
+        ----------
+        identifier: current identifier (not including the candidate facet)
+        facet: candidate facet
+        only_non_shielding: 
+
+        Returns
+        -------
+
+        """
+        remaining = self._sorted_d - self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
+        if only_non_shielding:
+            return np.array([0 if _ in set(facet) else remaining[_] for _ in range(self.n)])
+        else:
+            return np.array([remaining[_] - 1 if _ in set(facet) else remaining[_] for _ in range(self.n)])
 
     def get_available_slots(self, identifier):
         """
@@ -449,5 +451,3 @@ class SimplicialTest(SimplexRegistrar):
         for _id in identifier:
             facets += [self.id2name[_id]]
         return facets
-
-
