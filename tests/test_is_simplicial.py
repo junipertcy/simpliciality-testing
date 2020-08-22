@@ -77,6 +77,14 @@ def test_simple_12():
     assert st.is_simplicial(greedy=True) is True
 
 
+def test_simple_12_reduced():
+    """TODO: a new kind of reduction yet to be written"""
+    degree_list = [7, 7, 7, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3]
+    size_list = [11, 10, 8, 7, 7, 7, 7, 4, 4, 3, 2]
+    st = SimplicialTest(degree_list, size_list)
+    assert st.is_simplicial(greedy=True) is True
+
+
 def test_simple_13():
     degree_list = [8, 7, 7, 7, 6, 6, 5, 5, 5, 5, 5, 4, 4]
     size_list = [8, 7, 7, 7, 7, 7, 6, 6, 6, 5, 5, 3]
