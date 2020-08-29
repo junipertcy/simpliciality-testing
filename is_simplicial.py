@@ -9,7 +9,6 @@ from SimplicialTest import *
 def is_simplicial(degree_sequence, size_sequence, greedy):
     degree_sequence = list(map(int, degree_sequence.read().replace("\n", "").split(" ")))
     size_sequence = list(map(int, size_sequence.read().replace("\n", "").split(" ")))
-    size_sequence, degree_sequence = prune_ones(size_sequence, degree_sequence)
     st = SimplicialTest(degree_sequence, size_sequence)
     result = st.is_simplicial(greedy=greedy)
     if result is True:

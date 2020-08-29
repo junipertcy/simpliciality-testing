@@ -50,6 +50,41 @@ def flatten(nested_list):
     return [item for sublist in nested_list for item in sublist]
 
 
+def get_slimmest_d(s):
+    """
+
+    Parameters
+    ----------
+    s: size list
+
+    Returns
+    -------
+
+    """
+    s = sorted(s)
+    pool = set()
+    tentative_ = []
+    for _s in s:
+        tentative = tentative_
+        if len(tentative) == 0:
+            idx = 0
+            for _ in range(_s):
+                tentative += [idx]
+                idx += 1
+            pool.add(tuple(tentative))
+            tentative_ = tentative
+            continue
+        tentative[-1] += 1
+        idx = tentative[-1]
+        for _ in range(_s - len(tentative)):
+            idx += 1
+            tentative += [idx]
+
+        pool.add(tuple(tentative))
+        tentative_ = tentative
+    return sorted(Counter(flatten(pool)).values(), reverse=True)
+
+
 def gen_joint_sequence(m, poisson_lambda, n_max=0):
     _size_list = [0]
     while min(_size_list) == 0:
@@ -194,6 +229,7 @@ class SimplicialTest(SimplexRegistrar):
         __ = to_try.popitem()[1]
         candidate_facet = [_ for _ in range(self.n) if _ not in __]
         self.validate([], candidate_facet)
+
         while not self.validate([], candidate_facet):
             try:
                 __ = to_try.popitem()[1]
@@ -217,10 +253,7 @@ class SimplicialTest(SimplexRegistrar):
                     shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
                 else:
                     non_shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
-        # if self.q:
         non_shielding = sorted(non_shielding, key=itemgetter(2), reverse=False)  # originally: 1, true.... exp: 2, false
-        # else:
-        #     non_shielding = sorted(non_shielding, key=itemgetter(1), reverse=True)  # originally: 1, true.... exp: 2, false
 
         shielding = sorted(shielding, key=itemgetter(2), reverse=True)  # originally: 2, true
 
@@ -263,6 +296,7 @@ class SimplicialTest(SimplexRegistrar):
                 if not self.validate(identifier, candidate_facet, _id=_id):
                     non_stop = True
                     break
+
         picked_facet, picked_facet_id = self.register(candidate_facet)
         return picked_facet, picked_facet_id
 
@@ -295,14 +329,94 @@ class SimplicialTest(SimplexRegistrar):
                 return True
         return False
 
+    def validate_issubset(self, candidate_facet, _id):
+        """
+        Verify that the selected facet not be a subset of any higher facet.
+
+        Parameters
+        ----------
+        candidate_facet
+        _id
+
+        Returns
+        -------
+
+        """
+        if _id is not None:
+            return set(candidate_facet).issubset(set(self.id2name[_id]))
+        return False
+
+    def validate_nonshielding(self, remaining, both, non_shielding, shielding, candidate_facet=None):
+        """
+        Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
+
+        Parameters
+        ----------
+        remaining
+        non_shielding
+        shielding
+
+        Returns
+        -------
+
+        """
+        if np.sum(non_shielding) < remaining:
+            return True
+        elif np.sum(non_shielding) == remaining:
+            _ = self._sorted_s - 1
+            if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
+                return False
+            if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
+                if Counter(non_shielding)[1] == 0:
+                    return True
+            if len(self.identifier2facets()) == 0:
+
+                if Counter(_)[1] > Counter(both)[1]:  # per unknown_cases[52]
+                    return True
+            # if Counter(_)[1] > Counter(both[never_filled_filter])[1]:  # per unknown_cases[52]
+            #     return True
+        else:
+            return False  # safe!
+        return False
+
+    def validate_9(self, candidate_facet, remaining, both, identifier):
+        """
+
+        Parameters
+        ----------
+        remaining
+        both
+        identifier
+
+        Returns
+        -------
+
+        """
+        if len(np.where(both == remaining)[0]) > 0:
+            must_fill = len(np.where(both == remaining)[0])
+            both_ = deepcopy(both)
+            both_[both_ == remaining] = 0
+            remaining_ = self._sorted_s - must_fill
+            if Counter(remaining_)[1] > Counter(both_)[1]:
+                return True
+            else:
+                if len(remaining_[remaining_ != 1]) < np.max(both_[both_ != 1]):
+                    return True
+
+            for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
+                for facet in self.identifier2facets(identifier) + [candidate_facet]:  # find existing facets that contain this vertex_id
+                    if vertex_id in facet:
+                        non_shielding_part = set(range(self.n)).difference(set(facet))  # non_shielding_part vertex_id's
+                        if remaining > np.sum(both[np.array(list(non_shielding_part))]):  # remaining number of facets must be able to "hide" in those non_shielding slots
+                            return True
+                        if Counter(remaining_)[1] > Counter(both_)[1]:
+                            return True
+        return False
+
     def validate(self, identifier, candidate_facet, _id=None):
         """
         This function must return True in order for the candidate facet to be considered.
         In other words, if any condition appears to be True, we will not accept the candidate facet.
-
-        cond_1: the selected facet cannot be a subset of any higher facet.
-
-        cond_2: the number of remaining slots, for each vertex, cannot be larger than the number of unselected facets.
 
         cond_3: when the next-to-be-selected facet has the number of empty slots equal to that of the remaining slots,
                 the sum of the remaining slots cannot be larger than that number.
@@ -311,9 +425,7 @@ class SimplicialTest(SimplexRegistrar):
                 the number of the remaining slots cannot be less than that of the next-to-be-selected facet.
                 (otherwise, we simply cannot find such a facet)
 
-        cond_5: the sum of non-shielding slots should not be less than the number of the remaining facets.
-
-
+        cond_5: the number of remaining slots, for each vertex, cannot be larger than the number of unselected facets.
 
         Parameters
         ----------
@@ -326,32 +438,24 @@ class SimplicialTest(SimplexRegistrar):
 
         """
         _ = self.m - len(identifier) - 1
-        _1 = self.get_remaining_slots(identifier, candidate_facet)
+        _1 = self.get_remaining_slots(identifier, candidate_facet)  # all (non_shielding & shielding)
         _2 = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
         _3 = _1 - _2  # only shielding
-        cond_0 = self.validate_cond_0(_1[_1 != 0], self._sorted_s)
-
-        if _id is not None:
-            cond_1 = set(candidate_facet).issubset(set(self.id2name[_id]))
-        else:
-            cond_1 = False
-        cond_2 = np.any(_1 > _)
-        cond_3 = np.sum(_1) > np.count_nonzero(_1) == self._sorted_s[0]
-        cond_4 = len(self._sorted_s) > 0 and np.count_nonzero(_1) < self._sorted_s[0]
-        if np.sum(_2) < _:
-            cond_5 = True
-        elif np.sum(_2) == _:
-            _ = self._sorted_s - 1
-            if len(_) > 1 and np.count_nonzero(_3) == _[0]:  # There must be at least 2 facets that remain to be chosen.
-                if np.any(np.isin(_2[_2 != 0], 1)):
-                    cond_5 = False
-                else:
-                    cond_5 = True
-            else:
-                cond_5 = False
-        else:
-            cond_5 = False  # safe!
-        return not (cond_0 or cond_1 or cond_2 or cond_3 or cond_4 or cond_5)
+        if self.validate_9(candidate_facet, _, _1, identifier):
+            return False
+        if self.validate_cond_0(_1[_1 != 0], self._sorted_s):
+            return False
+        if self.validate_issubset(candidate_facet, _id):
+            return False
+        if self.validate_nonshielding(_, _1, _2, _3, candidate_facet=candidate_facet):
+            return False
+        if np.any(_1 > _):
+            return False
+        if np.sum(_1) > np.count_nonzero(_1) == self._sorted_s[0]:
+            return False
+        if len(self._sorted_s) > 0 and np.count_nonzero(_1) < self._sorted_s[0]:
+            return False
+        return True
 
     def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
         """
@@ -361,7 +465,7 @@ class SimplicialTest(SimplexRegistrar):
         ----------
         identifier: current identifier (not including the candidate facet)
         facet: candidate facet
-        only_non_shielding: 
+        only_non_shielding:
 
         Returns
         -------
