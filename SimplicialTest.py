@@ -228,7 +228,6 @@ class SimplicialTest(SimplexRegistrar):
         to_try = self.get_icebreaker_combinations(size)
         __ = to_try.popitem()[1]
         candidate_facet = [_ for _ in range(self.n) if _ not in __]
-        self.validate([], candidate_facet)
 
         while not self.validate([], candidate_facet):
             try:
@@ -237,8 +236,6 @@ class SimplicialTest(SimplexRegistrar):
                 return [], None
 
             candidate_facet = [_ for _ in range(self.n) if _ not in __]
-            self.validate([], candidate_facet)
-        self.validate([], candidate_facet)
 
         picked_facet, picked_facet_id = self.register(candidate_facet)
         return picked_facet, picked_facet_id
@@ -373,8 +370,6 @@ class SimplicialTest(SimplexRegistrar):
 
                 if Counter(_)[1] > Counter(both)[1]:  # per unknown_cases[52]
                     return True
-            # if Counter(_)[1] > Counter(both[never_filled_filter])[1]:  # per unknown_cases[52]
-            #     return True
         else:
             return False  # safe!
         return False
@@ -413,6 +408,56 @@ class SimplicialTest(SimplexRegistrar):
                             return True
         return False
 
+    @staticmethod
+    def validate_reduced_seq(curent_sizes, degrees, both):
+        if Counter(both)[len(curent_sizes)] == 0:
+            return False
+
+        _s = deepcopy(curent_sizes)
+        _d = deepcopy(degrees)
+        _both = deepcopy(both)
+        reduced_seq = False
+
+        if Counter(np.equal(both, _d))[True] == Counter(both)[len(_s)]:
+            reduced_seq = True
+        _s -= Counter(both)[len(_s)]
+        if np.any(_s < 0):
+            return True
+
+        _s = _s[_s != 0]
+        if len(_s) == 0:
+            return False
+
+        _both = _both[_both != len(_s)]
+        while Counter(_s)[1] != 0:
+            if Counter(_s)[1] > Counter(_both)[1]:
+                return True
+            _both = [_ for _ in _both]
+            for _ in range(Counter(_s)[1]):
+                _both.remove(1)
+            _both = np.array(_both)
+            _s = _s[_s != 1]
+
+            if Counter(_both)[len(_s)] != 0:
+                _s -= Counter(_both)[len(_s)]
+                _both = _both[_both != len(_s)]
+                _both = _both[_both != 0]
+        sizes = _s[_s != 0]
+        degrees = sorted(_both[_both != 0], reverse=True)
+        if len(degrees) == 0 and len(sizes) == 0:
+            return False
+        if reduced_seq:
+            st = SimplicialTest(degrees, sizes)
+            try:
+                bool_ = st.is_simplicial(greedy=True, preprocess=False)
+            except KeyError:
+                return True
+            except NotImplementedError:
+                return True
+            else:
+                if not bool_:
+                    return True
+
     def validate(self, identifier, candidate_facet, _id=None):
         """
         This function must return True in order for the candidate facet to be considered.
@@ -438,9 +483,11 @@ class SimplicialTest(SimplexRegistrar):
 
         """
         _ = self.m - len(identifier) - 1
-        _1 = self.get_remaining_slots(identifier, candidate_facet)  # all (non_shielding & shielding)
+        _1 = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
         _2 = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
         _3 = _1 - _2  # only shielding
+        if self.validate_reduced_seq(self._sorted_s, self._sorted_d, _1):
+            return False
         if self.validate_9(candidate_facet, _, _1, identifier):
             return False
         if self.validate_cond_0(_1[_1 != 0], self._sorted_s):
@@ -451,10 +498,10 @@ class SimplicialTest(SimplexRegistrar):
             return False
         if np.any(_1 > _):
             return False
-        if np.sum(_1) > np.count_nonzero(_1) == self._sorted_s[0]:
-            return False
-        if len(self._sorted_s) > 0 and np.count_nonzero(_1) < self._sorted_s[0]:
-            return False
+        # if np.sum(_1) > np.count_nonzero(_1) == self._sorted_s[0]:
+        #     return False
+        # if len(self._sorted_s) > 0 and np.count_nonzero(_1) < self._sorted_s[0]:
+        #     return False
         return True
 
     def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
@@ -709,7 +756,7 @@ class SimplicialTest(SimplexRegistrar):
     def _validate_data(self):
         if len(self._sorted_d) == len(self._sorted_s) == 0:
             return True
-        if np.max(self._sorted_d) > self.m:
+        if len(self._sorted_d) > 0 and np.max(self._sorted_d) > self.m:
             # print("1. This can never be simplicial.")  # TODO.... why??
             return False
 
