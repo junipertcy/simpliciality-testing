@@ -32,6 +32,14 @@ class SimplexRegistrar(object):
         }
 
 
+def remove_ones(s, both):
+    both = [_ for _ in both]
+    for _ in range(Counter(s)[1]):
+        both.remove(1)
+    both = np.array(both)
+    s = s[s != 1]
+    return s, both
+
 def trim_ones(size_list, degree_list):
     size_list = list(size_list)
     degree_list = list(degree_list)
@@ -219,7 +227,6 @@ class SimplicialTest(SimplexRegistrar):
         Parameters
         ----------
         size
-        q: TODO: when q is minus a large number, reject it.
 
         Returns
         -------
@@ -257,12 +264,13 @@ class SimplicialTest(SimplexRegistrar):
         return shielding, non_shielding
 
     @staticmethod
-    def get_valid_trails(shielding, non_shielding, size):
+    def get_valid_trials(shielding, non_shielding, size):
         n_shielding = len(shielding)
         n_non_shielding = len(non_shielding)
         n_ = n_shielding + n_non_shielding
         valid_trials = []
         i = 0
+
         while size + i <= n_:
             valid_trials += list(
                 _ for _ in combinations(range(size + i), size) if not set(_).issubset(set(range(n_shielding))))
@@ -280,7 +288,7 @@ class SimplicialTest(SimplexRegistrar):
         candidate_facet = []
         shielding, non_shielding = self.prioritize(identifier)
         options = shielding + non_shielding
-        valid_trials = self.get_valid_trails(shielding, non_shielding, size)
+        valid_trials = self.get_valid_trials(shielding, non_shielding, size)
 
         non_stop = True
         while non_stop:
@@ -296,35 +304,6 @@ class SimplicialTest(SimplexRegistrar):
 
         picked_facet, picked_facet_id = self.register(candidate_facet)
         return picked_facet, picked_facet_id
-
-    @staticmethod
-    def validate_cond_0(d, s):
-        d = deepcopy(d)
-        s = deepcopy(s)
-
-        d = np.array(d, dtype=np.int_)
-        s = np.array(s, dtype=np.int_)
-        while Counter(d)[len(s)] != 0:
-            s = np.sort(s)
-            d = np.sort(d)
-            if Counter(d)[len(s)] < np.min(s):
-                s -= Counter(d)[len(s)]
-                s = s[s != 0]
-            elif len(s) > 1 and Counter(d)[len(s)] == np.min(s):
-                return True
-
-            d = d[d != len(s)]
-
-            _1 = Counter(s)[1]
-            _2 = Counter(d)[1]
-            if _1 <= _2:
-                for _ in range(_1):
-                    s = s[1:]
-                    d = d[1:]
-
-            if len(s) > 1 and len(d) == np.max(s):
-                return True
-        return False
 
     def validate_issubset(self, candidate_facet, _id):
         """
@@ -343,13 +322,15 @@ class SimplicialTest(SimplexRegistrar):
             return set(candidate_facet).issubset(set(self.id2name[_id]))
         return False
 
-    def validate_nonshielding(self, remaining, both, non_shielding, shielding, candidate_facet=None):
+    @staticmethod
+    def validate_nonshielding(both, curent_sizes, non_shielding, shielding):
         """
         Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
 
         Parameters
         ----------
         remaining
+        both
         non_shielding
         shielding
 
@@ -357,97 +338,76 @@ class SimplicialTest(SimplexRegistrar):
         -------
 
         """
+        remaining = len(curent_sizes)
         if np.sum(non_shielding) < remaining:
             return True
         elif np.sum(non_shielding) == remaining:
-            _ = self._sorted_s - 1
+            _ = curent_sizes - 1
             if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
                 return False
             if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
                 if Counter(non_shielding)[1] == 0:
                     return True
-            if len(self.identifier2facets()) == 0:
-
-                if Counter(_)[1] > Counter(both)[1]:  # per unknown_cases[52]
-                    return True
+            # if len(self.identifier2facets()) == 0:
+            if Counter(_)[1] > Counter(both)[1]:  # per unknown_cases[52]
+                return True
         else:
             return False  # safe!
         return False
 
-    def validate_9(self, candidate_facet, remaining, both, identifier):
-        """
-
-        Parameters
-        ----------
-        remaining
-        both
-        identifier
-
-        Returns
-        -------
-
-        """
-        if len(np.where(both == remaining)[0]) > 0:
-            must_fill = len(np.where(both == remaining)[0])
-            both_ = deepcopy(both)
-            both_[both_ == remaining] = 0
-            remaining_ = self._sorted_s - must_fill
-            if Counter(remaining_)[1] > Counter(both_)[1]:
-                return True
-            else:
-                if len(remaining_[remaining_ != 1]) < np.max(both_[both_ != 1]):
-                    return True
-
+    @staticmethod
+    def validate_reduced_seq(both, curent_sizes, degrees, current_facets, candidate_facet):
+        remaining = len(curent_sizes)
+        n = len(both)
+        if np.any(both > remaining):
+            return True
+        if Counter(both)[remaining] == 0:
+            return False
+        else:
             for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
-                for facet in self.identifier2facets(identifier) + [candidate_facet]:  # find existing facets that contain this vertex_id
+                for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
                     if vertex_id in facet:
-                        non_shielding_part = set(range(self.n)).difference(set(facet))  # non_shielding_part vertex_id's
+                        non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
                         if remaining > np.sum(both[np.array(list(non_shielding_part))]):  # remaining number of facets must be able to "hide" in those non_shielding slots
                             return True
-                        if Counter(remaining_)[1] > Counter(both_)[1]:
-                            return True
-        return False
 
-    @staticmethod
-    def validate_reduced_seq(curent_sizes, degrees, both):
-        if Counter(both)[len(curent_sizes)] == 0:
-            return False
-
-        _s = deepcopy(curent_sizes)
-        _d = deepcopy(degrees)
-        _both = deepcopy(both)
-        reduced_seq = False
-
-        if Counter(np.equal(both, _d))[True] == Counter(both)[len(_s)]:
-            reduced_seq = True
-        _s -= Counter(both)[len(_s)]
-        if np.any(_s < 0):
-            return True
-
-        _s = _s[_s != 0]
+        _both = np.array(both, dtype=np.int_)
+        _s = np.array(curent_sizes, dtype=np.int_)
         if len(_s) == 0:
             return False
 
-        _both = _both[_both != len(_s)]
-        while Counter(_s)[1] != 0:
+        if Counter(np.equal(_both, degrees))[True] == Counter(_both)[len(_s)]:
+            reduced_seq = True
+        else:
+            reduced_seq = False
+
+        while Counter(_both)[len(_s)] != 0:
+            if Counter(_both)[len(_s)] == np.min(_s) and len(_s) > 1:
+                return True
+            _s -= Counter(_both)[len(_s)]
+            if np.any(_s < 0):
+                return True
+            _s = _s[_s != 0]
+            if len(_s) == 0:
+                return False
+
+            _both = _both[_both != len(_s)]
+            _both = _both[_both != 0]
+
             if Counter(_s)[1] > Counter(_both)[1]:
                 return True
-            _both = [_ for _ in _both]
-            for _ in range(Counter(_s)[1]):
-                _both.remove(1)
-            _both = np.array(_both)
-            _s = _s[_s != 1]
+            else:
+                _s, _both = remove_ones(_s, _both)
 
-            if Counter(_both)[len(_s)] != 0:
-                _s -= Counter(_both)[len(_s)]
-                _both = _both[_both != len(_s)]
-                _both = _both[_both != 0]
+            if len(_s) > 1 and len(_both) == np.max(_s):
+                return True
+
         sizes = _s[_s != 0]
-        degrees = sorted(_both[_both != 0], reverse=True)
-        if len(degrees) == 0 and len(sizes) == 0:
+        degs = sorted(_both[_both != 0], reverse=True)
+        if len(degs) == 0 and len(sizes) == 0:
             return False
         if reduced_seq:
-            st = SimplicialTest(degrees, sizes)
+            st = SimplicialTest(degs, sizes)
             try:
                 bool_ = st.is_simplicial(greedy=True, preprocess=False)
             except KeyError:
@@ -482,25 +442,22 @@ class SimplicialTest(SimplexRegistrar):
         -------
 
         """
-        _ = self.m - len(identifier) - 1
-        _1 = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
-        _2 = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
-        _3 = _1 - _2  # only shielding
-        if self.validate_reduced_seq(self._sorted_s, self._sorted_d, _1):
+        _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
+        _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
+        _shielding = _both - _non_shielding  # only shielding
+        _sizes = self._sorted_s
+        _degrees = self._sorted_d
+        _current_facets = self.identifier2facets(identifier)
+
+        if self.validate_nonshielding(_both, _sizes, _non_shielding, _shielding):
             return False
-        if self.validate_9(candidate_facet, _, _1, identifier):
-            return False
-        if self.validate_cond_0(_1[_1 != 0], self._sorted_s):
+        if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
             return False
         if self.validate_issubset(candidate_facet, _id):
             return False
-        if self.validate_nonshielding(_, _1, _2, _3, candidate_facet=candidate_facet):
-            return False
-        if np.any(_1 > _):
-            return False
-        # if np.sum(_1) > np.count_nonzero(_1) == self._sorted_s[0]:
+        # if np.sum(_both) > np.count_nonzero(_both) == self._sorted_s[0]:
         #     return False
-        # if len(self._sorted_s) > 0 and np.count_nonzero(_1) < self._sorted_s[0]:
+        # if len(self._sorted_s) > 0 and np.count_nonzero(_both) < self._sorted_s[0]:
         #     return False
         return True
 
