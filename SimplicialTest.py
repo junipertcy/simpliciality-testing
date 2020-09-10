@@ -32,6 +32,59 @@ class SimplexRegistrar(object):
         }
 
 
+def accel_asc(n, size, counter):
+    """
+    Modified from: http://jeromekelleher.net/tag/integer-partitions.html
+
+    Parameters
+    ----------
+    n
+    size
+    counter
+
+    Returns
+    -------
+
+    """
+    a = [0 for _ in range(n + 1)]
+    k = 1
+    y = n - 1
+    while k != 0:
+        x = a[k - 1] + 1
+        k -= 1
+        while 2 * x <= y:
+            a[k] = x
+            y -= x
+            k += 1
+        l = k + 1
+        while x <= y:
+            a[k] = x
+            a[l] = y
+            if len(a[:k + 2]) == size:
+                _counter = Counter(a[:k + 2])
+                indicator = True
+                for _ in _counter:
+                    if _counter[_] > counter[_]:
+                        indicator = False
+                        break
+                if indicator:
+                    yield a[:k + 2]
+            x += 1
+            y -= 1
+        a[k] = x + y
+        y = x + y - 1
+        if len(a[:k + 1]) == size:
+            _counter = Counter(a[:k + 1])
+
+            indicator = True
+            for _ in _counter:
+                if _counter[_] > counter[_]:
+                    indicator = False
+                    break
+            if indicator:
+                yield a[:k + 1]
+
+
 def remove_ones(s, both):
     both = [_ for _ in both]
     for _ in range(Counter(s)[1]):
@@ -39,6 +92,7 @@ def remove_ones(s, both):
     both = np.array(both)
     s = s[s != 1]
     return s, both
+
 
 def trim_ones(size_list, degree_list):
     size_list = list(size_list)
@@ -160,7 +214,6 @@ class SimplicialTest(SimplexRegistrar):
     size_list : ``iterable`` or :class:`numpy.ndarray`, required
 
     """
-
     def __init__(self, degree_list, size_list):
         super().__init__()
 
@@ -190,6 +243,7 @@ class SimplicialTest(SimplexRegistrar):
             "isolated": 0,  # append n 0-simplices at the end
             "heuristic": 0
         }
+        # print(f"SimplicialTest initiated. degree_list={self.DEGREE_LIST}; size_list={self.SIZE_LIST}.")
 
     def update_deg_seq(self, facet, value):
         if value not in [+1, -1]:
@@ -203,6 +257,7 @@ class SimplicialTest(SimplexRegistrar):
     def _break_symmetry(self, greedy=False):
         m = self._sorted_s[0]
         self._sorted_s = np.delete(self._sorted_s, 0)
+
         if greedy:
             picked_facet, picked_facet_id = self.sample_simplex_greedy(m)
         else:
@@ -210,40 +265,61 @@ class SimplicialTest(SimplexRegistrar):
         self.update_deg_seq(picked_facet, +1)
         self.identifier = [picked_facet_id]
 
+    def get_nonselected(self, ind):
+        nonselected = set()
+        pool = defaultdict(list)
+        for _ in ind:
+            if len(pool[_]) == 0:
+                pool[_] = list(np.where(self._sorted_d == _)[0])
+            nonselected.add(pool[_].pop(-1))
+        return nonselected
+
     def get_icebreaker_combinations(self, size):
-        to_try = defaultdict(list)
         n = len(self._sorted_d)
         _size = n - size
-        for s in sorted([(combs, self._sorted_d[list(combs)], np.sum(self._sorted_d[list(combs)])) for combs in
-                         combinations(range(n), _size)], key=lambda _1: _1[2], reverse=True):
-            if len(to_try[tuple(s[1])]) == 0:
-                to_try[tuple(s[1])] = s[0]
-            else:
-                continue
-        return to_try
+        _min = np.sum(self._sorted_d[-_size:])
+        _max = np.sum(self._sorted_d[:_size])
+        k = _min
+        gen = accel_asc(k, _size, Counter(self._sorted_d))
+        while k <= _max:
+            try:
+                yield next(gen)
+            except StopIteration:
+                k += 1
+                gen = accel_asc(k, _size, Counter(self._sorted_d))
 
-    def sample_icebreaker(self, size):
+    def sample_icebreaker(self, size, method="heuristic"):
         """
         Parameters
         ----------
         size
+        method: `heuristic` or `strict`
 
         Returns
         -------
 
         """
-        to_try = self.get_icebreaker_combinations(size)
-        __ = to_try.popitem()[1]
-        candidate_facet = [_ for _ in range(self.n) if _ not in __]
+        n = len(self._sorted_d)
+        if method == "heuristic":
+            gen = combinations(range(n), n - size)
+            __ = [n - 1 - _ for _ in next(gen)]
+        elif method == "strict":
+            gen = self.get_icebreaker_combinations(size)
+            __ = self.get_nonselected(next(gen))
+        else:
+            raise AttributeError("method can only be `heuristic` or `strict`.")
 
+        candidate_facet = [_ for _ in range(self.n) if _ not in __]
         while not self.validate([], candidate_facet):
             try:
-                __ = to_try.popitem()[1]
-            except KeyError:
+                if method == "heuristic":
+                    __ = [n - 1 - _ for _ in next(gen)]
+                elif method == "strict":
+                    __ = self.get_nonselected(next(gen))
+            except StopIteration:
                 return [], None
 
             candidate_facet = [_ for _ in range(self.n) if _ not in __]
-
         picked_facet, picked_facet_id = self.register(candidate_facet)
         return picked_facet, picked_facet_id
 
@@ -268,15 +344,18 @@ class SimplicialTest(SimplexRegistrar):
         n_shielding = len(shielding)
         n_non_shielding = len(non_shielding)
         n_ = n_shielding + n_non_shielding
-        valid_trials = []
         i = 0
 
+        gen = combinations(range(size + i), size)
         while size + i <= n_:
-            valid_trials += list(
-                _ for _ in combinations(range(size + i), size) if not set(_).issubset(set(range(n_shielding))))
-            i += 1
-        valid_trials = iter(valid_trials)
-        return valid_trials
+            try:
+                _comb = next(gen)
+            except StopIteration:
+                i += 1
+                gen = combinations(range(size + i), size)
+            else:
+                if not set(_comb).issubset(set(range(n_shielding))):
+                    yield _comb
 
     def sample_simplex_greedy(self, size):
         identifier = self.identifier
@@ -297,6 +376,7 @@ class SimplicialTest(SimplexRegistrar):
                 candidate_facet = [options[_][0] for _ in next(valid_trials)]
             except StopIteration:
                 raise NotImplementedError("May not be solvable with the greedy algorithm.")
+
             for _id in larger_selected_simplex_ids:
                 if not self.validate(identifier, candidate_facet, _id=_id):
                     non_stop = True
@@ -351,9 +431,7 @@ class SimplicialTest(SimplexRegistrar):
             # if len(self.identifier2facets()) == 0:
             if Counter(_)[1] > Counter(both)[1]:  # per unknown_cases[52]
                 return True
-        else:
-            return False  # safe!
-        return False
+        return False  # safe!
 
     @staticmethod
     def validate_reduced_seq(both, curent_sizes, degrees, current_facets, candidate_facet):
@@ -368,7 +446,7 @@ class SimplicialTest(SimplexRegistrar):
                 for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
                     if vertex_id in facet:
                         non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
-                        if remaining > np.sum(both[np.array(list(non_shielding_part))]):  # remaining number of facets must be able to "hide" in those non_shielding slots
+                        if remaining > np.sum(both[np.array(list(non_shielding_part), dtype=np.int_)]):  # remaining number of facets must be able to "hide" in those non_shielding slots
                             return True
 
         _both = np.array(both, dtype=np.int_)
@@ -407,12 +485,10 @@ class SimplicialTest(SimplexRegistrar):
         if len(degs) == 0 and len(sizes) == 0:
             return False
         if reduced_seq:
-            st = SimplicialTest(degs, sizes)
             try:
+                st = SimplicialTest(degs, sizes)
                 bool_ = st.is_simplicial(greedy=True, preprocess=False)
-            except KeyError:
-                return True
-            except NotImplementedError:
+            except (KeyError, NotImplementedError):
                 return True
             else:
                 if not bool_:
@@ -448,17 +524,16 @@ class SimplicialTest(SimplexRegistrar):
         _sizes = self._sorted_s
         _degrees = self._sorted_d
         _current_facets = self.identifier2facets(identifier)
-
         if self.validate_nonshielding(_both, _sizes, _non_shielding, _shielding):
             return False
         if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
             return False
         if self.validate_issubset(candidate_facet, _id):
             return False
-        # if np.sum(_both) > np.count_nonzero(_both) == self._sorted_s[0]:
-        #     return False
-        # if len(self._sorted_s) > 0 and np.count_nonzero(_both) < self._sorted_s[0]:
-        #     return False
+        if np.sum(_both) > np.count_nonzero(_both) == _sizes[0]:
+            return False
+        if len(_sizes) > 0 and np.count_nonzero(_both) < _sizes[0]:
+            return False
         return True
 
     def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
@@ -576,11 +651,14 @@ class SimplicialTest(SimplexRegistrar):
                 copy_sorted_d = deepcopy(self._sorted_d)
                 self._sorted_d = np.delete(self._sorted_d, -1)
                 self._sorted_d[0] -= 1
+                self._sorted_d = self._sorted_d[self._sorted_d != 0]
                 self._sorted_d = np.array(sorted(self._sorted_d, reverse=True))
                 self._sorted_s = np.delete(self._sorted_s, -1)
 
                 self.m -= 1
                 self.n -= 1
+                if len(self._sorted_s) == 0:
+                    break
                 if self._validate_data() is False:
                     self._sorted_s = copy_sorted_s
                     self._sorted_d = copy_sorted_d
@@ -602,8 +680,8 @@ class SimplicialTest(SimplexRegistrar):
         self.deg_seq = np.zeros(self.n, dtype=np.int_)
         return True
 
-    def postprocess(self):
-        pass
+    # def postprocess(self):
+    #     pass
 
     def is_simplicial(self, greedy=False, preprocess=False):
         if self._validate_data():
@@ -615,10 +693,12 @@ class SimplicialTest(SimplexRegistrar):
             _ = self.preprocess()
             if _ is False:
                 return False
+            if len(self._sorted_s) == len(self._sorted_d) == 0:
+                return True
 
         self._break_symmetry(greedy=greedy)
         if len(self._sorted_s) == 0:
-            if sorted(self.deg_seq, reverse=True) == self._sorted_d:  # TODO: start from identifier
+            if sorted(self.deg_seq, reverse=True) == self._sorted_d.tolist():  # TODO: start from identifier
                 return True
             else:
                 return False
@@ -716,7 +796,6 @@ class SimplicialTest(SimplexRegistrar):
         if len(self._sorted_d) > 0 and np.max(self._sorted_d) > self.m:
             # print("1. This can never be simplicial.")  # TODO.... why??
             return False
-
         if np.max(self._sorted_s) >= self.n:
             if len(self._sorted_s) == 1 and np.max(self._sorted_s) == self.n:
                 return True
