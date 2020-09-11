@@ -9,6 +9,10 @@ elif [[ "$TRAVIS_OS_NAME" == "osx" ]]
 then
     brew update
     brew upgrade
+elif [[ "$TRAVIS_OS_NAME" == "windows" ]]
+then
+    choco install python --version 3.8.0
+    python --version
 fi
 
 export INSTALL_TEST_REQUIREMENTS="true"
