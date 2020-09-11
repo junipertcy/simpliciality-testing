@@ -536,25 +536,23 @@ class SimplicialTest(SimplexRegistrar):
         -------
 
         """
-        _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
-        _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
-        _shielding = _both - _non_shielding  # only shielding
-        _sizes = self._sorted_s
-        _degrees = self._sorted_d
-        _current_facets = self.identifier2facets(identifier)
         if self.validate_issubset(candidate_facet, _id):
             return False
 
-        if self.validate_nonshielding(_both, _sizes, _degrees, _non_shielding, _shielding):
-            return False
-
-        if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
-            return False
-
+        _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
+        _sizes = self._sorted_s
         if np.sum(_both) > np.count_nonzero(_both) == _sizes[0]:
             return False
-
         if len(_sizes) > 0 and np.count_nonzero(_both) < _sizes[0]:
+            return False
+
+        _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
+        _shielding = _both - _non_shielding  # only shielding
+        _degrees = self._sorted_d
+        _current_facets = self.identifier2facets(identifier)
+        if self.validate_nonshielding(_both, _sizes, _degrees, _non_shielding, _shielding):
+            return False
+        if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
             return False
         return True
 

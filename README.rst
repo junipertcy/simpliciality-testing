@@ -61,6 +61,11 @@ For example,
 
 Interesting? I think it is!
 
+Installation
+------------
+This program is tested on major platforms, including Windows. Please see the corresponding `Travis CI tests`_.
+
+
 MISC notes (to clean up later)
 ------------------------------
 * The graphical `Erdős–Gallai theorem`_.
@@ -68,3 +73,4 @@ MISC notes (to clean up later)
 .. _`Erdős–Gallai theorem`: https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem
 .. _`crime network dataset`: https://github.com/jg-you/scm/blob/master/datasets/crime_facet_list.txt
 .. _`Phys. Rev. E paper`: https://doi.org/10.1103/PhysRevE.96.032312
+.. _`Travis CI tests`: https://travis-ci.org/github/junipertcy/simpliciality_test
