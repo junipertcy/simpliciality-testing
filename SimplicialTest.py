@@ -243,6 +243,7 @@ class SimplicialTest(SimplexRegistrar):
             "isolated": 0,  # append n 0-simplices at the end
             "heuristic": 0
         }
+
         # print(f"SimplicialTest initiated. degree_list={self.DEGREE_LIST}; size_list={self.SIZE_LIST}.")
 
     def update_deg_seq(self, facet, value):
@@ -376,7 +377,6 @@ class SimplicialTest(SimplexRegistrar):
                 candidate_facet = [options[_][0] for _ in next(valid_trials)]
             except StopIteration:
                 raise NotImplementedError("May not be solvable with the greedy algorithm.")
-
             for _id in larger_selected_simplex_ids:
                 if not self.validate(identifier, candidate_facet, _id=_id):
                     non_stop = True
@@ -403,7 +403,7 @@ class SimplicialTest(SimplexRegistrar):
         return False
 
     @staticmethod
-    def validate_nonshielding(both, curent_sizes, non_shielding, shielding):
+    def validate_nonshielding(both, curent_sizes, degrees, non_shielding, shielding):
         """
         Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
 
@@ -428,9 +428,6 @@ class SimplicialTest(SimplexRegistrar):
             if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
                 if Counter(non_shielding)[1] == 0:
                     return True
-            # if len(self.identifier2facets()) == 0:
-            if Counter(_)[1] > Counter(both)[1]:  # per unknown_cases[52]
-                return True
         return False  # safe!
 
     @staticmethod
@@ -481,18 +478,39 @@ class SimplicialTest(SimplexRegistrar):
                 return True
 
         sizes = _s[_s != 0]
-        degs = sorted(_both[_both != 0], reverse=True)
+        degs = _both[_both != 0]
         if len(degs) == 0 and len(sizes) == 0:
             return False
-        if reduced_seq:
+        if np.any(degs > len(sizes)):
+            return True  # reject this candidate facet
+
+        if len(current_facets) == 0:
+            return False
+        try:
+            st = SimplicialTest(degs, sizes)
+            bool_ = st.is_simplicial(greedy=True, preprocess=False)
+        except (KeyError, NotImplementedError):
             try:
                 st = SimplicialTest(degs, sizes)
-                bool_ = st.is_simplicial(greedy=True, preprocess=False)
+                bool_ = st.is_simplicial(greedy=True, preprocess=True)
             except (KeyError, NotImplementedError):
                 return True
             else:
-                if not bool_:
+                if bool_:
+                    if reduced_seq:
+                        # print("///// This is definitely simplicial! /////")
+                        pass
+                    return False
+                else:
                     return True
+        else:
+            if bool_:
+                if reduced_seq:
+                    # print("///// This is definitely simplicial! /////")
+                    pass
+                return False
+            else:
+                return True
 
     def validate(self, identifier, candidate_facet, _id=None):
         """
@@ -524,14 +542,18 @@ class SimplicialTest(SimplexRegistrar):
         _sizes = self._sorted_s
         _degrees = self._sorted_d
         _current_facets = self.identifier2facets(identifier)
-        if self.validate_nonshielding(_both, _sizes, _non_shielding, _shielding):
-            return False
-        if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
-            return False
         if self.validate_issubset(candidate_facet, _id):
             return False
+
+        if self.validate_nonshielding(_both, _sizes, _degrees, _non_shielding, _shielding):
+            return False
+
+        if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
+            return False
+
         if np.sum(_both) > np.count_nonzero(_both) == _sizes[0]:
             return False
+
         if len(_sizes) > 0 and np.count_nonzero(_both) < _sizes[0]:
             return False
         return True

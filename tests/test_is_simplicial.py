@@ -89,7 +89,7 @@ def test_simple_13():
     degree_list = [8, 7, 7, 7, 6, 6, 5, 5, 5, 5, 5, 4, 4]
     size_list = [8, 7, 7, 7, 7, 7, 6, 6, 6, 5, 5, 3]
     st = SimplicialTest(degree_list, size_list)
-    assert st.is_simplicial(greedy=True) is True
+    assert st.is_simplicial(greedy=True, preprocess=True) is True
 
 
 def test_simple_14():
@@ -134,3 +134,27 @@ def test_crime_dataset():
     st = SimplicialTest(degree_list, size_list)
     assert st.is_simplicial(greedy=True, preprocess=True) is True
 
+
+def test_validate_reduced_seq_1():
+    degree_list, size_list = (
+    [11, 9, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 6, 6, 6, 5, 5], [16, 15, 13, 13, 11, 11, 10, 10, 9, 9, 4, 4])
+    st = SimplicialTest(degree_list, size_list)
+    assert st.is_simplicial(greedy=True, preprocess=True) is True
+
+
+def test_validate_reduced_seq_2():
+    degree_list, size_list = (
+        [11, 9, 8, 8, 7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 6, 6, 5, 4, 4, 4],
+        [21, 14, 13, 13, 12, 12, 12, 11, 10, 9, 9, 8]
+    )
+    st = SimplicialTest(degree_list, size_list)
+    assert st.is_simplicial(greedy=True, preprocess=True) is True
+
+
+def test_validate_reduced_seq_3():
+    degree_list, size_list = (
+        [11, 11, 9, 8, 8, 8, 8, 8, 7, 7, 6, 6, 6, 6, 6, 5, 5, 5, 5, 5, 5, 5, 4, 3],
+        [23, 17, 15, 15, 15, 14, 13, 11, 10, 9, 8, 7]
+    )
+    st = SimplicialTest(degree_list, size_list)
+    assert st.is_simplicial(greedy=True, preprocess=True) is True

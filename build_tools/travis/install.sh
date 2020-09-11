@@ -13,4 +13,3 @@ fi
 
 export INSTALL_TEST_REQUIREMENTS="true"
 echo $INSTALL_TEST_REQUIREMENTS
-© 2020 GitHub, Inc.
