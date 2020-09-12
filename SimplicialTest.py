@@ -90,8 +90,7 @@ def remove_ones(s, both):
     for _ in range(Counter(s)[1]):
         both.remove(1)
     both = np.array(both)
-    s = s[s != 1]
-    return s, both
+    return both
 
 
 def trim_ones(size_list, degree_list):
@@ -310,7 +309,7 @@ class SimplicialTest(SimplexRegistrar):
         else:
             raise AttributeError("method can only be `heuristic` or `strict`.")
 
-        candidate_facet = [_ for _ in range(self.n) if _ not in __]
+        candidate_facet = tuple([_ for _ in range(self.n) if _ not in __])
         while not self.validate([], candidate_facet):
             try:
                 if method == "heuristic":
@@ -374,7 +373,7 @@ class SimplicialTest(SimplexRegistrar):
         while non_stop:
             non_stop = False
             try:
-                candidate_facet = [options[_][0] for _ in next(valid_trials)]
+                candidate_facet = tuple([options[_][0] for _ in next(valid_trials)])
             except StopIteration:
                 raise NotImplementedError("May not be solvable with the greedy algorithm.")
             for _id in larger_selected_simplex_ids:
@@ -403,7 +402,7 @@ class SimplicialTest(SimplexRegistrar):
         return False
 
     @staticmethod
-    def validate_nonshielding(both, curent_sizes, degrees, non_shielding, shielding):
+    def validate_nonshielding(curent_sizes, non_shielding, shielding):
         """
         Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
 
@@ -433,38 +432,53 @@ class SimplicialTest(SimplexRegistrar):
     @staticmethod
     def validate_reduced_seq(both, curent_sizes, degrees, current_facets, candidate_facet):
         remaining = len(curent_sizes)
+        if remaining == 0:
+            return False
         n = len(both)
         if np.any(both > remaining):
             return True
         if Counter(both)[remaining] == 0:
             return False
-        else:
-            for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
-                for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
-                    if vertex_id in facet:
-                        non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
-                        if remaining > np.sum(both[np.array(list(non_shielding_part), dtype=np.int_)]):  # remaining number of facets must be able to "hide" in those non_shielding slots
-                            return True
-
-        _both = np.array(both, dtype=np.int_)
-        _s = np.array(curent_sizes, dtype=np.int_)
-        if len(_s) == 0:
-            return False
-
-        if Counter(np.equal(_both, degrees))[True] == Counter(_both)[len(_s)]:
+        if Counter(np.equal(both, degrees))[True] == Counter(both)[remaining]:
             reduced_seq = True
         else:
             reduced_seq = False
 
+        _nshielding = set()
+        _shielding = set()
+        flag = True
+        for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
+            for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
+                if vertex_id in facet:
+                    non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
+                    if flag:
+                        _nshielding = non_shielding_part
+                        flag = False
+                    else:
+                        _nshielding.intersection_update(non_shielding_part)
+                    # remaining number of facets must be able to "hide" in those non_shielding slots, at least
+                    if remaining > np.sum(both[np.array(list(non_shielding_part), dtype=np.int_)]):
+                        return True
+        _ns_both = both[np.array(list(_nshielding), dtype=np.int_)]
+        _both = np.array(both, dtype=np.int_)
+        _s = np.array(curent_sizes, dtype=np.int_)
+
+        firsttime = True
         while Counter(_both)[len(_s)] != 0:
             if Counter(_both)[len(_s)] == np.min(_s) and len(_s) > 1:
                 return True
+            if len(_s) > 1 and len(_both) == np.max(_s):
+                return True
+            _ = Counter(_both)[len(_s)]
             _s -= Counter(_both)[len(_s)]
             if np.any(_s < 0):
                 return True
             _s = _s[_s != 0]
             if len(_s) == 0:
                 return False
+            if Counter(_s)[1] > 0 and Counter(_s)[1] > Counter(_ns_both)[1]:
+                if _ == 1 and flag is False and firsttime is True:
+                    return True
 
             _both = _both[_both != len(_s)]
             _both = _both[_both != 0]
@@ -472,10 +486,10 @@ class SimplicialTest(SimplexRegistrar):
             if Counter(_s)[1] > Counter(_both)[1]:
                 return True
             else:
-                _s, _both = remove_ones(_s, _both)
-
-            if len(_s) > 1 and len(_both) == np.max(_s):
-                return True
+                _both = remove_ones(_s, _both)
+                _s = _s[_s != 1]
+            if firsttime:
+                firsttime = False
 
         sizes = _s[_s != 0]
         degs = _both[_both != 0]
@@ -490,19 +504,9 @@ class SimplicialTest(SimplexRegistrar):
             st = SimplicialTest(degs, sizes)
             bool_ = st.is_simplicial(greedy=True, preprocess=False)
         except (KeyError, NotImplementedError):
-            try:
-                st = SimplicialTest(degs, sizes)
-                bool_ = st.is_simplicial(greedy=True, preprocess=True)
-            except (KeyError, NotImplementedError):
-                return True
-            else:
-                if bool_:
-                    if reduced_seq:
-                        # print("///// This is definitely simplicial! /////")
-                        pass
-                    return False
-                else:
-                    return True
+            return True
+        except Exception as e:
+            print(f"Uncaught exception: {e}.")
         else:
             if bool_:
                 if reduced_seq:
@@ -548,12 +552,14 @@ class SimplicialTest(SimplexRegistrar):
 
         _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
         _shielding = _both - _non_shielding  # only shielding
+        if self.validate_nonshielding(_sizes, _non_shielding, _shielding):
+            return False
+
         _degrees = self._sorted_d
         _current_facets = self.identifier2facets(identifier)
-        if self.validate_nonshielding(_both, _sizes, _degrees, _non_shielding, _shielding):
-            return False
         if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
             return False
+
         return True
 
     def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
