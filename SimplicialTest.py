@@ -32,6 +32,25 @@ class SimplexRegistrar(object):
         }
 
 
+def get_nshielding(both, curent_sizes, current_facets, candidate_facet):
+    remaining = len(curent_sizes)
+    n = len(both)
+    _nshielding = set()
+    flag = True
+    for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
+        for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
+            if vertex_id in facet:
+                non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
+                if flag:
+                    _nshielding = non_shielding_part
+                    flag = False
+                else:
+                    _nshielding.intersection_update(non_shielding_part)
+                # remaining number of facets must be able to "hide" in those non_shielding slots, at least
+                if remaining > np.sum(both[np.array(list(non_shielding_part), dtype=np.int_)]):
+                    return True, (flag, set())
+    return False, (flag, _nshielding)
+
 def accel_asc(n, size, counter):
     """
     Modified from: http://jeromekelleher.net/tag/integer-partitions.html
@@ -183,7 +202,7 @@ def gen_joint_sequence(m, poisson_lambda, n_max=0):
 
 def sort_helper(st):
     d = defaultdict()
-    for idx, _ in enumerate(st._sorted_d):
+    for idx, _ in enumerate(st.DEGREE_LIST):
         d[idx] = _
 
     inv_map = defaultdict(list)
@@ -238,7 +257,6 @@ class SimplicialTest(SimplexRegistrar):
         self._len_logbook = 0
 
         self.matching = {
-            "appending": 0,  # append n vertices to each facet at the end
             "isolated": 0,  # append n 0-simplices at the end
             "heuristic": 0
         }
@@ -408,8 +426,7 @@ class SimplicialTest(SimplexRegistrar):
 
         Parameters
         ----------
-        remaining
-        both
+        curent_sizes
         non_shielding
         shielding
 
@@ -428,93 +445,6 @@ class SimplicialTest(SimplexRegistrar):
                 if Counter(non_shielding)[1] == 0:
                     return True
         return False  # safe!
-
-    @staticmethod
-    def validate_reduced_seq(both, curent_sizes, degrees, current_facets, candidate_facet):
-        remaining = len(curent_sizes)
-        if remaining == 0:
-            return False
-        n = len(both)
-        if np.any(both > remaining):
-            return True
-        if Counter(both)[remaining] == 0:
-            return False
-        if Counter(np.equal(both, degrees))[True] == Counter(both)[remaining]:
-            reduced_seq = True
-        else:
-            reduced_seq = False
-
-        _nshielding = set()
-        _shielding = set()
-        flag = True
-        for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
-            for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
-                if vertex_id in facet:
-                    non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
-                    if flag:
-                        _nshielding = non_shielding_part
-                        flag = False
-                    else:
-                        _nshielding.intersection_update(non_shielding_part)
-                    # remaining number of facets must be able to "hide" in those non_shielding slots, at least
-                    if remaining > np.sum(both[np.array(list(non_shielding_part), dtype=np.int_)]):
-                        return True
-        _ns_both = both[np.array(list(_nshielding), dtype=np.int_)]
-        _both = np.array(both, dtype=np.int_)
-        _s = np.array(curent_sizes, dtype=np.int_)
-
-        firsttime = True
-        while Counter(_both)[len(_s)] != 0:
-            if Counter(_both)[len(_s)] == np.min(_s) and len(_s) > 1:
-                return True
-            if len(_s) > 1 and len(_both) == np.max(_s):
-                return True
-            _ = Counter(_both)[len(_s)]
-            _s -= Counter(_both)[len(_s)]
-            if np.any(_s < 0):
-                return True
-            _s = _s[_s != 0]
-            if len(_s) == 0:
-                return False
-            if Counter(_s)[1] > 0 and Counter(_s)[1] > Counter(_ns_both)[1]:
-                if _ == 1 and flag is False and firsttime is True:
-                    return True
-
-            _both = _both[_both != len(_s)]
-            _both = _both[_both != 0]
-
-            if Counter(_s)[1] > Counter(_both)[1]:
-                return True
-            else:
-                _both = remove_ones(_s, _both)
-                _s = _s[_s != 1]
-            if firsttime:
-                firsttime = False
-
-        sizes = _s[_s != 0]
-        degs = _both[_both != 0]
-        if len(degs) == 0 and len(sizes) == 0:
-            return False
-        if np.any(degs > len(sizes)):
-            return True  # reject this candidate facet
-
-        if len(current_facets) == 0:
-            return False
-        try:
-            st = SimplicialTest(degs, sizes)
-            bool_ = st.is_simplicial(greedy=True, preprocess=False)
-        except (KeyError, NotImplementedError):
-            return True
-        except Exception as e:
-            print(f"Uncaught exception: {e}.")
-        else:
-            if bool_:
-                if reduced_seq:
-                    # print("///// This is definitely simplicial! /////")
-                    pass
-                return False
-            else:
-                return True
 
     def validate(self, identifier, candidate_facet, _id=None):
         """
@@ -549,7 +479,8 @@ class SimplicialTest(SimplexRegistrar):
             return False
         if len(_sizes) > 0 and np.count_nonzero(_both) < _sizes[0]:
             return False
-
+        if np.any(_both > len(_sizes)):
+            return False
         _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
         _shielding = _both - _non_shielding  # only shielding
         if self.validate_nonshielding(_sizes, _non_shielding, _shielding):
@@ -557,10 +488,80 @@ class SimplicialTest(SimplexRegistrar):
 
         _degrees = self._sorted_d
         _current_facets = self.identifier2facets(identifier)
-        if self.validate_reduced_seq(_both, _sizes, _degrees, _current_facets, candidate_facet):
-            return False
+        if len(_sizes) > 0 and Counter(_both)[len(_sizes)] > 0:
+            reduced_seq = self.is_reduced_seq(_both, _sizes, _degrees)
+            # print(type(_sizes))
+            _ = self.validate_reduced_seq(_both, _sizes, _current_facets, candidate_facet)
+            if _ is True:
+                return False
+            elif _ is False:
+                pass
+            else:
+                degs, sizes = _
+                bool_ = self._recursive_is_simplicial(degs, sizes)
+                if reduced_seq and bool_:
+                    # print("///// This is definitely simplicial! /////")
+                    pass
+                return bool_
 
         return True
+
+    @staticmethod
+    def is_reduced_seq(both, sizes, degrees):
+        return Counter(np.equal(both, degrees))[True] == Counter(both)[len(sizes)]
+
+    @staticmethod
+    def validate_reduced_seq(both, curent_sizes, current_facets, candidate_facet):
+        if np.any(curent_sizes < 0):
+            return True
+
+        indicator, (flag, _nshielding) = get_nshielding(both, curent_sizes, current_facets, candidate_facet)
+        if indicator:
+            return True
+
+        _ns_both = both[np.array(list(_nshielding), dtype=np.int_)]
+        curent_sizes = np.array(curent_sizes, dtype=np.int_)
+
+        firsttime = True
+        while Counter(both)[len(curent_sizes)] != 0:
+            if len(curent_sizes) > 1:
+                if Counter(both)[len(curent_sizes)] == np.min(curent_sizes) or len(both) == np.max(curent_sizes):
+                    return True
+
+            _ = Counter(both)[len(curent_sizes)]
+
+            curent_sizes -= Counter(both)[len(curent_sizes)]
+            curent_sizes = curent_sizes[curent_sizes != 0]
+            if len(curent_sizes) == 0:
+                return False
+
+            if Counter(curent_sizes)[1] > 0 and Counter(curent_sizes)[1] > Counter(_ns_both)[1]:
+                if _ == 1 and flag is False and firsttime is True:
+                    return True
+
+            both = both[both != len(curent_sizes)]
+            both = both[both != 0]
+
+            if Counter(curent_sizes)[1] > Counter(both)[1]:
+                return True
+            else:
+                both = remove_ones(curent_sizes, both)
+                curent_sizes = curent_sizes[curent_sizes != 1]
+            if firsttime:
+                firsttime = False
+        return both, curent_sizes
+
+    @staticmethod
+    def _recursive_is_simplicial(degs, sizes):
+        try:
+            st = SimplicialTest(degs, sizes)
+            bool_ = st.is_simplicial(greedy=True, preprocess=False)
+        except (KeyError, NotImplementedError):
+            return False
+        if bool_:
+            return True
+        else:
+            return False
 
     def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
         """
@@ -646,73 +647,12 @@ class SimplicialTest(SimplexRegistrar):
 
         return picked_facet, picked_facet_id
 
-    def preprocess(self):
-        idx = 0
-        while self._sorted_d[idx] == len(self._sorted_s):
-            self._sorted_s -= 1
-            self.matching["appending"] += 1
-            self._sorted_d = np.delete(self._sorted_d, 0)
-            self.n -= 1
-            idx += 1
-            # TODO: if any 0 is present in the sizes list, it's a different story...
-
-        _s = Counter(self._sorted_s)[1]
-        _d = Counter(self._sorted_d)[1]
-        if _s > _d:
-            print("Too many 0-simplices. We cannot satisfy the inclusive constraint.")
-            return False
-        else:
-            for _ in range(_s):
-                self._sorted_d = np.delete(self._sorted_d, -1)
-                self._sorted_s = np.delete(self._sorted_s, -1)
-                self.m -= 1
-                self.n -= 1
-                self.matching["isolated"] += 1
-
-        _s = Counter(self._sorted_s)[1]
-        _d = Counter(self._sorted_d)[1]
-        if _s == 0 and _d > 0:
-            for _ in range(_d):
-                copy_sorted_s = deepcopy(self._sorted_s)
-                copy_sorted_d = deepcopy(self._sorted_d)
-                self._sorted_d = np.delete(self._sorted_d, -1)
-                self._sorted_d[0] -= 1
-                self._sorted_d = self._sorted_d[self._sorted_d != 0]
-                self._sorted_d = np.array(sorted(self._sorted_d, reverse=True))
-                self._sorted_s = np.delete(self._sorted_s, -1)
-
-                self.m -= 1
-                self.n -= 1
-                if len(self._sorted_s) == 0:
-                    break
-                if self._validate_data() is False:
-                    self._sorted_s = copy_sorted_s
-                    self._sorted_d = copy_sorted_d
-                    self.m += 1
-                    self.n += 1
-                    break
-                else:
-                    m = self._sorted_s[0]
-                    self._sorted_s = np.delete(self._sorted_s, 0)
-                    if self.sample_icebreaker(m)[1] is None:
-                        self._sorted_s = copy_sorted_s
-                        self._sorted_d = copy_sorted_d
-                        self.m += 1
-                        self.n += 1
-                        break
-                    self._sorted_s = np.insert(self._sorted_s, 0, m)
-                    self.matching["heuristic"] += 1
-
-        self.deg_seq = np.zeros(self.n, dtype=np.int_)
-        return True
-
-    # def postprocess(self):
-    #     pass
-
     def is_simplicial(self, greedy=False, preprocess=False):
         if self._validate_data():
             return True
         elif self._validate_data() is False:
+            return False
+        if not self.match_ones():
             return False
 
         if preprocess:
@@ -832,3 +772,57 @@ class SimplicialTest(SimplexRegistrar):
             # print("Failing the Gale–Ryser criterion (1957), the sequence is not bigraphic.")
             return False
         # TODO: there is a second part of the GR criterion, which is not coded yet.
+
+    def match_ones(self):
+        _s = Counter(self._sorted_s)[1]
+        _d = Counter(self._sorted_d)[1]
+        if _s > _d:
+            print("Too many 0-simplices. We cannot satisfy the inclusive constraint.")
+            return False
+        else:
+            for _ in range(_s):
+                self._sorted_d = np.delete(self._sorted_d, -1)
+                self._sorted_s = np.delete(self._sorted_s, -1)
+                self.m -= 1
+                self.n -= 1
+                self.matching["isolated"] += 1
+        self.deg_seq = np.zeros(self.n, dtype=np.int_)
+        return True
+
+    def preprocess(self):
+        _s = Counter(self._sorted_s)[1]
+        _d = Counter(self._sorted_d)[1]
+        if _s == 0 and _d > 0:
+            for _ in range(_d):
+                copy_sorted_s = deepcopy(self._sorted_s)
+                copy_sorted_d = deepcopy(self._sorted_d)
+                self._sorted_d = np.delete(self._sorted_d, -1)
+                self._sorted_d[0] -= 1
+                self._sorted_d = self._sorted_d[self._sorted_d != 0]
+                self._sorted_d = np.array(sorted(self._sorted_d, reverse=True))
+                self._sorted_s = np.delete(self._sorted_s, -1)
+
+                self.m -= 1
+                self.n -= 1
+                if len(self._sorted_s) == 0:
+                    break
+                if self._validate_data() is False:
+                    self._sorted_s = copy_sorted_s
+                    self._sorted_d = copy_sorted_d
+                    self.m += 1
+                    self.n += 1
+                    break
+                else:
+                    m = self._sorted_s[0]
+                    self._sorted_s = np.delete(self._sorted_s, 0)
+                    if self.sample_icebreaker(m)[1] is None:
+                        self._sorted_s = copy_sorted_s
+                        self._sorted_d = copy_sorted_d
+                        self.m += 1
+                        self.n += 1
+                        break
+                    self._sorted_s = np.insert(self._sorted_s, 0, m)
+                    self.matching["heuristic"] += 1
+
+        self.deg_seq = np.zeros(self.n, dtype=np.int_)
+        return True
