@@ -32,13 +32,25 @@ class SimplexRegistrar(object):
         }
 
 
-def get_nshielding(both, curent_sizes, current_facets, candidate_facet):
+def get_nshielding(both, curent_sizes, current_facets):
+    """
+
+    Parameters
+    ----------
+    both
+    curent_sizes
+    current_facets
+
+    Returns
+    -------
+
+    """
     remaining = len(curent_sizes)
     n = len(both)
     _nshielding = set()
     flag = True
     for vertex_id in np.where(both == remaining)[0]:  # vertex_id's when we had to fill up all remaining slots
-        for facet in current_facets + [candidate_facet]:  # find existing facets that contain this vertex_id
+        for facet in current_facets:  # find existing facets that contain this vertex_id
             if vertex_id in facet:
                 non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
                 if flag:
@@ -50,6 +62,7 @@ def get_nshielding(both, curent_sizes, current_facets, candidate_facet):
                 if remaining > np.sum(both[np.array(list(non_shielding_part), dtype=np.int_)]):
                     return True, (flag, set())
     return False, (flag, _nshielding)
+
 
 def accel_asc(n, size, counter):
     """
@@ -352,9 +365,7 @@ class SimplicialTest(SimplexRegistrar):
                 else:
                     non_shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
         non_shielding = sorted(non_shielding, key=itemgetter(2), reverse=False)  # originally: 1, true.... exp: 2, false
-
-        shielding = sorted(shielding, key=itemgetter(2), reverse=True)  # originally: 2, true
-
+        shielding = sorted(shielding, key=itemgetter(1), reverse=True)  # originally: 2, true
         return shielding, non_shielding
 
     @staticmethod
@@ -487,11 +498,10 @@ class SimplicialTest(SimplexRegistrar):
             return False
 
         _degrees = self._sorted_d
-        _current_facets = self.identifier2facets(identifier)
+        _current_facets = self.identifier2facets(identifier) + [candidate_facet]
         if len(_sizes) > 0 and Counter(_both)[len(_sizes)] > 0:
             reduced_seq = self.is_reduced_seq(_both, _sizes, _degrees)
-            # print(type(_sizes))
-            _ = self.validate_reduced_seq(_both, _sizes, _current_facets, candidate_facet)
+            _ = self.validate_reduced_seq(_both, _sizes, _current_facets)
             if _ is True:
                 return False
             elif _ is False:
@@ -511,11 +521,11 @@ class SimplicialTest(SimplexRegistrar):
         return Counter(np.equal(both, degrees))[True] == Counter(both)[len(sizes)]
 
     @staticmethod
-    def validate_reduced_seq(both, curent_sizes, current_facets, candidate_facet):
-        if np.any(curent_sizes < 0):
-            return True
+    def validate_reduced_seq(both, curent_sizes, current_facets):
+        # if np.any(curent_sizes < 0):
+        #     return True
 
-        indicator, (flag, _nshielding) = get_nshielding(both, curent_sizes, current_facets, candidate_facet)
+        indicator, (flag, _nshielding) = get_nshielding(both, curent_sizes, current_facets)
         if indicator:
             return True
 
@@ -534,7 +544,7 @@ class SimplicialTest(SimplexRegistrar):
             curent_sizes = curent_sizes[curent_sizes != 0]
             if len(curent_sizes) == 0:
                 return False
-
+            #
             if Counter(curent_sizes)[1] > 0 and Counter(curent_sizes)[1] > Counter(_ns_both)[1]:
                 if _ == 1 and flag is False and firsttime is True:
                     return True
@@ -543,6 +553,8 @@ class SimplicialTest(SimplexRegistrar):
             both = both[both != 0]
 
             if Counter(curent_sizes)[1] > Counter(both)[1]:
+                # TODO: crime data with preprocessing=False failed at this point. Some facets should not be rejected
+                # with this criterion.
                 return True
             else:
                 both = remove_ones(curent_sizes, both)
