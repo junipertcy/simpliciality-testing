@@ -1,6 +1,7 @@
 import time
+import validators
+
 from utils import *
-from validators import *
 from math import comb
 from operator import itemgetter
 from itertools import combinations
@@ -50,6 +51,7 @@ class SimplicialTest(SimplexRegistrar):
             self.blocked_sets = blocked_sets
         self.verbose = verbose
         self.reduced_data = None
+        self.collected_facets = list()
 
         # print(f"SimplicialTest initiated. degree_list={self.DEGREE_LIST}; size_list={self.SIZE_LIST}.")
 
@@ -220,13 +222,21 @@ class SimplicialTest(SimplexRegistrar):
         -------
 
         """
-        if validate_issubset(self.id2name, candidate_facet, _id, blocked_sets=self.blocked_sets):
+        current_facets = self.identifier2facets(identifier) + [candidate_facet]
+        # if candidate_facet == (6, 7, 8, 3, 5):
+        #     print("Yo")
+        if validators.validate_issubset(self.id2name, candidate_facet, _id, blocked_sets=self.blocked_sets):
             return False, "1"
         _sizes = self._sorted_s
         if len(_sizes) == 0:
             return True, "0"
 
         _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
+        if len(_sizes) == 1:
+            for facet in current_facets:
+                if set(np.nonzero(_both)[0]).issubset(set(facet)):
+                    return False, "12"
+
         if np.any(_both > len(_sizes)):
             return False, "4"
         if np.sum(_both) > np.count_nonzero(_both) == _sizes[0]:
@@ -234,7 +244,8 @@ class SimplicialTest(SimplexRegistrar):
 
         _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
         _shielding = _both - _non_shielding  # only shielding
-        if validate_nonshielding(_sizes, _non_shielding, _shielding):
+        # print(_sizes, _non_shielding, _shielding, current_facets)
+        if validators.validate_nonshielding(_sizes, _non_shielding, _shielding):
             return False, "5"
         if np.count_nonzero(_both) < _sizes[0]:
             return False, "3"
@@ -243,22 +254,32 @@ class SimplicialTest(SimplexRegistrar):
                 return False, "11"
 
         # _degrees = self._sorted_d
-        _current_facets = self.identifier2facets(identifier) + [candidate_facet]
-        if Counter(_both)[len(_sizes)] > 0 and len(_current_facets) > 1:
+        if Counter(_both)[len(_sizes)] > 0 and len(current_facets) > 1:
             # reduced_seq = self.is_reduced_seq(_both, _sizes, _degrees)
-            _ = self.validate_reduced_seq(_both, _sizes, _current_facets)
+            _ = self.validate_reduced_seq(_both, _sizes, current_facets)
             if _:
                 return False, "6"
             if self.reduced_data is not None:
                 # print(f"We have self.reduced_data={self.reduced_data}")
 
                 degs, sizes, shielding_facets = self.reduced_data
+                if np.sum(degs) == np.sum(sizes) == 0:
+                    for facet in current_facets:
+                        for collected_facet in self.collected_facets:
+                            if set(collected_facet).issubset(set(facet)):
+                                # print(f"collected_facet = {collected_facet} is a subset of {facet}")
+                                return False, "10"
+                    # print(f"self.collected_facets = {self.collected_facets}")
+                    # print(f"accepting a proposal = {candidate_facet}")
+                    return True, "0"
                 mapping = get_reduced_seq_mapping(degs)
                 inv_map = {v: k for k, v in mapping.items()}
                 _blocked_sets = transform_facets(shielding_facets, inv_map)
-
+                # print(f"recursive call, input (degs, sizes) = {(degs, sizes)}")
                 bool_, facets = self._recursive_is_simplicial(degs, sizes, blocked_sets=_blocked_sets, verbose=False)
                 # print(f"Oh, yeah, the recursive version is simplicial. facets = {facets}")  # TODO: use case 38 to complete this part
+                # print(
+                #     f"also, we have self.collected_facets = {self.collected_facets}")  # TODO: use case 38 to complete this part
                 # if reduced_seq and bool_:
                 #     # print("📝 This is definitely simplicial! 📝")
                 #     pass
@@ -270,6 +291,7 @@ class SimplicialTest(SimplexRegistrar):
 
     def validate_reduced_seq(self, both, curent_sizes, current_facets) -> bool:
         self.reduced_data = None
+        self.collected_facets = list()
         # print(f"START validate_reduced_seq:: (both, curent_sizes, current_facets) = {both, curent_sizes, current_facets}")
         curent_sizes = np.array(curent_sizes, dtype=np.int_)
         shielding_facets = []
@@ -277,38 +299,57 @@ class SimplicialTest(SimplexRegistrar):
         while Counter(both)[len(curent_sizes)] != 0:
             if len(curent_sizes) > 1:
                 if not basic_validations_degs_and_sizes(degs=both, sizes=curent_sizes):
+                    # print("validate_reduced_seq - 1")
                     return True
 
             must_be_filled_vids = np.where(both == len(curent_sizes))[0]
 
             # print(f"START get_nshielding:: (both, curent_sizes, current_facets) = {both, curent_sizes, current_facets}")
             shielding_facets = get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, exempt_vids=exempt_vids)
+            # print(f"Before (get_nonshielding_vids) shielding_facets = {shielding_facets}; {np.nonzero(both)}")
             nonshielding_vids = get_nonshielding_vids(shielding_facets, both)
+            # print(f"After (get_nonshielding_vids) nonshielding_vids = {nonshielding_vids}")
             shielding_facets = [set(_).difference(set(must_be_filled_vids)) for _ in shielding_facets]
 
             curent_sizes -= Counter(both)[len(curent_sizes)]
+            # print(f"both = {both}; must_be_filled_vids={must_be_filled_vids}")
+
             if Counter(curent_sizes)[0] == len(curent_sizes):
-                # print(3)
-                return False
+                # print(f"both = {both}; must_be_filled_vids={must_be_filled_vids}")
+                self.collected_facets += [exempt_vids + must_be_filled_vids.tolist()]
+                # print(f"Adding {exempt_vids + [must_be_filled_vids]} to collected_facets")
+
+                # print(3, curent_sizes, "###### BREAK #########")
+                both[both == len(curent_sizes)] = 0
+                break
             both[both == len(curent_sizes)] = 0
 
             if Counter(curent_sizes)[1] > Counter(both)[1]:
-                # print(4)
-
+                # print("validate_reduced_seq - 2")
                 return True
             if Counter(curent_sizes)[1] > 0:
                 try:
-                    both = remove_ones(curent_sizes, both, choose_from=nonshielding_vids)
+                    if len(shielding_facets) == 0:  # You are free to do "remove_ones"
+                        nonshielding_vids = set(np.nonzero(both)[0])
+                    # print(f"curent_sizes={curent_sizes}; both={both}; nonshielding_vids = {nonshielding_vids}")
+                    both, removed_sites = remove_ones(curent_sizes, both, choose_from=nonshielding_vids)
                 except NoSlotError:
-                    # print(5)
+                    # print("validate_reduced_seq - 3")
 
                     return True
                 else:
                     curent_sizes = curent_sizes[curent_sizes != 1]
-            exempt_vids = must_be_filled_vids
+                    # print(f"removed_sites = {removed_sites}; must_be_filled_vids={must_be_filled_vids}; exempt_vids={exempt_vids}")
+                    to_be_added_facets = [exempt_vids + must_be_filled_vids.tolist() + [s] for s in removed_sites]
+                    # print(f"to_be_added_facets = {to_be_added_facets}")
+                    self.collected_facets += to_be_added_facets
+                    # print(f"Adding {[list(removed_sites) + list(must_be_filled_vids)]} to collected_facets")
+            exempt_vids += must_be_filled_vids.tolist()
+            # print(f"exempt_vids = {exempt_vids}")
         # print(
         #     f"END validate_reduced_seq:: (both, curent_sizes, shielding_facets) = {both, curent_sizes, shielding_facets} \n")
         self.reduced_data = (both, curent_sizes, shielding_facets)
+        # print(6)
         return False
 
     def _recursive_is_simplicial(self, degs, sizes, blocked_sets=None, verbose=False) -> (bool, list):
@@ -411,7 +452,7 @@ class SimplicialTest(SimplexRegistrar):
         elif self._validate_data() is False:
             return False
 
-        ####### match_ones ######
+        # match_ones
         ind, self._sorted_s, self._sorted_d, matching_isolated = match_ones(self._sorted_s, self._sorted_d)
         if not ind:
             return False
@@ -420,7 +461,6 @@ class SimplicialTest(SimplexRegistrar):
             self.n = len(self._sorted_d)
             self.deg_seq = np.zeros(self.n, dtype=np.int_)
             self.matching["isolated"] = matching_isolated
-        ####### match_ones ######
 
         self._break_symmetry(greedy=greedy)
         if len(self._sorted_s) == 0:
@@ -441,7 +481,7 @@ class SimplicialTest(SimplexRegistrar):
                 continue
 
             self.update_deg_seq(picked_facet, +1)
-            if checkpoint_1(self._sorted_d, self.deg_seq):
+            if validators.checkpoint_1(self._sorted_d, self.deg_seq):
                 self.identifier += [picked_facet_id]
             else:
                 # Backtrack

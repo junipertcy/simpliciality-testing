@@ -158,7 +158,7 @@ def accel_asc(n, size, counter):
                 yield a[:k + 1]
 
 
-def remove_ones(s, both, choose_from=None):
+def remove_ones(s, both, choose_from=set()):
     # orig_both = deepcopy(both)
     # _both = deepcopy(both)
     # both = [_ for _ in both]
@@ -174,9 +174,9 @@ def remove_ones(s, both, choose_from=None):
         if not choose_from:
             raise NoSlotError
     # print(f"choose_from is {choose_from}")
-    _ = np.array(list(choose_from))[:Counter(s)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
-    both[_] = 0
-    return both
+    removed_sites = np.array(list(choose_from))[:Counter(s)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
+    both[removed_sites] = 0
+    return both, removed_sites.tolist()
 
 
 def trim_ones(size_list, degree_list) -> (list, list):

@@ -49,9 +49,6 @@ def validate_issubset(id2name, candidate_facet, _id, blocked_sets=None):
     if blocked_sets is not None:
         for facet in blocked_sets:
             if set(candidate_facet).issubset(set(facet)):
-                # if self.verbose:
-                #     print(f"(level={self._level}) candidate_facet: {candidate_facet} is sadly contained in {facet}; therefore we reject it.")
-                #     print(f"(level={self._level}) identifier2facets={self.identifier2facets()}")
                 return True
     return False
 
