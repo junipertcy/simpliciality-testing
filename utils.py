@@ -57,6 +57,7 @@ def transform_facets(facets, inv_map):
 
 def get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, exempt_vids=list()) -> (bool, set, list):
     """
+    TODO: this function can be further simplified, along with the function::validate_reduced_seq
     The function works when one have "must_be_filled_vids" -- it goes by searching already existing facets,
     And find out the slots that must not be chosen in order to avoid clashes.
 

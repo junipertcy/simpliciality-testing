@@ -52,6 +52,7 @@ class SimplicialTest(SimplexRegistrar):
         self.verbose = verbose
         self.reduced_data = None
         self.collected_facets = list()
+        self.debug_counter = 0
 
         # print(f"SimplicialTest initiated. degree_list={self.DEGREE_LIST}; size_list={self.SIZE_LIST}.")
 
@@ -223,8 +224,7 @@ class SimplicialTest(SimplexRegistrar):
 
         """
         current_facets = self.identifier2facets(identifier) + [candidate_facet]
-        # if candidate_facet == (6, 7, 8, 3, 5):
-        #     print("Yo")
+
         if validators.validate_issubset(self.id2name, candidate_facet, _id, blocked_sets=self.blocked_sets):
             return False, "1"
         _sizes = self._sorted_s
@@ -232,6 +232,9 @@ class SimplicialTest(SimplexRegistrar):
             return True, "0"
 
         _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
+        if np.min(_both) < 0:
+            return False, "13"
+
         if len(_sizes) == 1:
             for facet in current_facets:
                 if set(np.nonzero(_both)[0]).issubset(set(facet)):
@@ -243,6 +246,8 @@ class SimplicialTest(SimplexRegistrar):
             return False, "2"
 
         _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
+        if np.min(_non_shielding) < 0:
+            return False, "14"
         _shielding = _both - _non_shielding  # only shielding
         # print(_sizes, _non_shielding, _shielding, current_facets)
         if validators.validate_nonshielding(_sizes, _non_shielding, _shielding):
@@ -254,39 +259,59 @@ class SimplicialTest(SimplexRegistrar):
                 return False, "11"
 
         # _degrees = self._sorted_d
-        if Counter(_both)[len(_sizes)] > 0 and len(current_facets) > 1:
-            # reduced_seq = self.is_reduced_seq(_both, _sizes, _degrees)
-            _ = self.validate_reduced_seq(_both, _sizes, current_facets)
-            if _:
-                return False, "6"
-            if self.reduced_data is not None:
-                # print(f"We have self.reduced_data={self.reduced_data}")
-
-                degs, sizes, shielding_facets = self.reduced_data
-                if np.sum(degs) == np.sum(sizes) == 0:
-                    for facet in current_facets:
-                        for collected_facet in self.collected_facets:
-                            if set(collected_facet).issubset(set(facet)):
-                                # print(f"collected_facet = {collected_facet} is a subset of {facet}")
-                                return False, "10"
-                    # print(f"self.collected_facets = {self.collected_facets}")
-                    # print(f"accepting a proposal = {candidate_facet}")
-                    return True, "0"
-                mapping = get_reduced_seq_mapping(degs)
+        if len(current_facets) > 1:
+            if Counter(_both)[len(_sizes)] > 0:
+                # reduced_seq = self.is_reduced_seq(_both, _sizes, _degrees)
+                _ = self.validate_reduced_seq(_both, _sizes, current_facets)
+                if _:
+                    return False, "6"
+                if self.reduced_data is not None:
+                    # print(f"We have self.reduced_data={self.reduced_data}")
+                    degs, sizes, shielding_facets = self.reduced_data
+                    if np.sum(degs) == np.sum(sizes) == 0:
+                        for facet in current_facets:
+                            for collected_facet in self.collected_facets:
+                                if set(collected_facet).issubset(set(facet)):
+                                    # print(f"collected_facet = {collected_facet} is a subset of {facet}")
+                                    return False, "10"
+                        # print(f"self.collected_facets = {self.collected_facets}")
+                        # print(f"accepting a proposal = {candidate_facet}")
+                        return True, "0"
+                    mapping = get_reduced_seq_mapping(degs)
+                    inv_map = {v: k for k, v in mapping.items()}
+                    _blocked_sets = transform_facets(shielding_facets, inv_map)
+                    # print(f"(l={self._level}) recursive call, input (degs, sizes) = {(degs, sizes)} current_facets={current_facets}; ")
+                    bool_, facets = self._recursive_is_simplicial(degs, sizes, blocked_sets=_blocked_sets, verbose=False)
+                    # if bool_:
+                    #     print(f"Oh, yeah, the recursive version is simplicial. facets = {facets}")  # TODO: use case 38 to complete this part
+                    #     print(
+                    #     f"also, we have self.collected_facets = {self.collected_facets}")  # TODO: use case 38 to complete this part
+                    # if reduced_seq and bool_:
+                    #     # print("📝 This is definitely simplicial! 📝")
+                    #     pass
+                    if not bool_:
+                        return bool_, "7"
+                    else:
+                        return True, "0"
+            else:
+                self.debug_counter += 1
+                # print(f"(l={self._level}) Checking.... current facets: {current_facets}")
+                # if sorted(candidate_facet) == [0, 1, 2, 3, 4, 5, 12] or sorted(candidate_facet) == [0, 1, 2, 3, 4, 7, 12]:
+                mapping = get_reduced_seq_mapping(_both)
                 inv_map = {v: k for k, v in mapping.items()}
-                _blocked_sets = transform_facets(shielding_facets, inv_map)
-                # print(f"recursive call, input (degs, sizes) = {(degs, sizes)}")
-                bool_, facets = self._recursive_is_simplicial(degs, sizes, blocked_sets=_blocked_sets, verbose=False)
-                # print(f"Oh, yeah, the recursive version is simplicial. facets = {facets}")  # TODO: use case 38 to complete this part
-                # print(
-                #     f"also, we have self.collected_facets = {self.collected_facets}")  # TODO: use case 38 to complete this part
-                # if reduced_seq and bool_:
-                #     # print("📝 This is definitely simplicial! 📝")
-                #     pass
+                # print(f"... \n candidate_facet={candidate_facet} \n _both= {_both}; _sizes = {_sizes}")
+
+                # print(f"inv_map: {inv_map}")
+                _blocked_sets = transform_facets(current_facets, inv_map)
+                # print(f"current facets: {current_facets}")
+                # print(f"(l={self._level}) Checking.... to recurse: {_both, _sizes, _blocked_sets}")
+                bool_, facets = self._recursive_is_simplicial(_both, _sizes, blocked_sets=_blocked_sets, verbose=False)
+                # print(f"(l={self._level}) bool_ = {bool_}; facets={facets} \n")
+                # if self.debug_counter == 20000:
+                #     exit(0)
                 if not bool_:
-                    return bool_, "7"
-                else:
-                    return True, "0"
+                    return bool_, "333"
+
         return True, "0"
 
     def validate_reduced_seq(self, both, curent_sizes, current_facets) -> bool:
@@ -335,7 +360,6 @@ class SimplicialTest(SimplexRegistrar):
                     both, removed_sites = remove_ones(curent_sizes, both, choose_from=nonshielding_vids)
                 except NoSlotError:
                     # print("validate_reduced_seq - 3")
-
                     return True
                 else:
                     curent_sizes = curent_sizes[curent_sizes != 1]
