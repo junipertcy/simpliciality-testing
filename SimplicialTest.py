@@ -17,6 +17,7 @@ class SimplicialTest(SimplexRegistrar):
     size_list : ``iterable`` or :class:`numpy.ndarray`, required
 
     """
+
     def __init__(self, degree_list, size_list, level=0, blocked_sets=None, verbose=False):
         super().__init__()
 
@@ -52,7 +53,12 @@ class SimplicialTest(SimplexRegistrar):
         self.verbose = verbose
         self.reduced_data = None
         self.collected_facets = list()
-        self.debug_counter = 0
+        self.current_facets = list()
+        self.exempt_vids = list()
+        self.callback_data = dict()  # level: facets
+
+        self.mapping2shrinked = dict()
+        self.mapping2enlarged = dict()
 
         # print(f"SimplicialTest initiated. degree_list={self.DEGREE_LIST}; size_list={self.SIZE_LIST}.")
 
@@ -188,14 +194,16 @@ class SimplicialTest(SimplexRegistrar):
             try:
                 candidate_facet = tuple([options[_][0] for _ in next(valid_trials)])
             except StopIteration:
+                # print(f"[l={self._level}] StopIteration raised.")
                 raise NotImplementedError("May not be solvable with the greedy algorithm.")
             for _id in larger_selected_simplex_ids:
                 ind, reason = self.validate(identifier, candidate_facet, _id=_id)
                 if not ind:
                     non_stop = True
-                    # print(f"[l={self._level}] okay, here we learnt that {candidate_facet} is rejected due to {reason}")
+                    # print(f"[l={self._level}] The facet: {candidate_facet} is rejected due to {reason}")
                     break
-
+        # print(
+        #     f"(l={self._level}) This facet: {candidate_facet} is accepted! Meanwhile, there are already these: {self.identifier2facets(identifier)} facets.")
         picked_facet, picked_facet_id = self.register(candidate_facet)
         return picked_facet, picked_facet_id
 
@@ -277,11 +285,19 @@ class SimplicialTest(SimplexRegistrar):
                         # print(f"self.collected_facets = {self.collected_facets}")
                         # print(f"accepting a proposal = {candidate_facet}")
                         return True, "0"
-                    mapping = get_reduced_seq_mapping(degs)
-                    inv_map = {v: k for k, v in mapping.items()}
-                    _blocked_sets = transform_facets(shielding_facets, inv_map)
-                    # print(f"(l={self._level}) recursive call, input (degs, sizes) = {(degs, sizes)} current_facets={current_facets}; ")
-                    bool_, facets = self._recursive_is_simplicial(degs, sizes, blocked_sets=_blocked_sets, verbose=False)
+                    self.mapping2shrinked, self.mapping2enlarged = get_seq2seq_mapping(degs)
+                    # print("\n"
+                    #       f"mapping2shrinked = {self.mapping2shrinked} \n"
+                    #       f"mapping2enlarged = {self.mapping2enlarged} \n"
+                    #       f"degs = {degs}\n"
+                    #       f"shielding_facets = {shielding_facets} \n"
+                    #       f"self.collected_facets = {self.collected_facets} \n"
+                    #       "\n")
+                    _blocked_sets = shrink_facets(shielding_facets, self.mapping2shrinked)
+                    # print(
+                    #     f"(l={self._level}) recursive call, input (degs, sizes) = {(degs, sizes)} current_facets={current_facets}; ")
+                    bool_, facets = self._recursive_is_simplicial(degs, sizes, blocked_sets=_blocked_sets,
+                                                                  verbose=False)
                     # if bool_:
                     #     print(f"Oh, yeah, the recursive version is simplicial. facets = {facets}")  # TODO: use case 38 to complete this part
                     #     print(
@@ -289,30 +305,85 @@ class SimplicialTest(SimplexRegistrar):
                     # if reduced_seq and bool_:
                     #     # print("📝 This is definitely simplicial! 📝")
                     #     pass
-                    if not bool_:
-                        return bool_, "7"
-                    else:
-                        return True, "0"
-            else:
-                self.debug_counter += 1
-                # print(f"(l={self._level}) Checking.... current facets: {current_facets}")
-                # if sorted(candidate_facet) == [0, 1, 2, 3, 4, 5, 12] or sorted(candidate_facet) == [0, 1, 2, 3, 4, 7, 12]:
-                mapping = get_reduced_seq_mapping(_both)
-                inv_map = {v: k for k, v in mapping.items()}
-                # print(f"... \n candidate_facet={candidate_facet} \n _both= {_both}; _sizes = {_sizes}")
+                    if bool_:
+                        facets = [self.exempt_vids + list(s) for s in facets]
+                        # print(f"(l={self._level}) bool_ = {bool_}; facets={facets} We shall stop. \n")
+                        self.current_facets = current_facets
+                        # print(f"(l={self._level}) Now we define, for the first time, self.current_facets = {current_facets} \n")
 
+                        # Experimental
+                        # all_facets = self.current_facets + [self.exempt_vids + list(s) for s in
+                        #                                     facets] + self.collected_facets
+                        all_facets = self.current_facets + [self.exempt_vids + list(s) for s in facets] + self.collected_facets
+                        self.callback_data[self._level] = all_facets
+
+                        # If the above experiment failed, fall back to...
+                        # self.callback_data[self._level] = facets
+                        # return bool_, 0
+                        raise WeCanStopSignal
+                    else:
+                        return bool_, "7"
+            else:
+                # print(
+                #     f"(l={self._level}) Validate at current facets: {current_facets}, will send to l={self._level + 1}")
+                # if sorted(candidate_facet) == [0, 1, 2, 3, 4, 5, 12] or sorted(candidate_facet) == [0, 1, 2, 3, 4, 7, 12]:
+                self.mapping2shrinked, self.mapping2enlarged = get_seq2seq_mapping(_both)
+                # print("\n"
+                #       f"self.mapping2shrinked, self.mapping2enlarged = {self.mapping2shrinked, self.mapping2enlarged}"
+                #       ""
+                #       ""
+                #       "\n")
+                # print(f"... \n candidate_facet={candidate_facet} \n _both= {_both}; _sizes = {_sizes}")
                 # print(f"inv_map: {inv_map}")
-                _blocked_sets = transform_facets(current_facets, inv_map)
-                # print(f"current facets: {current_facets}")
+                _blocked_sets = shrink_facets(current_facets, self.mapping2shrinked)
+                # print(f"(l={self._level}) current facets: {current_facets}")
                 # print(f"(l={self._level}) Checking.... to recurse: {_both, _sizes, _blocked_sets}")
                 bool_, facets = self._recursive_is_simplicial(_both, _sizes, blocked_sets=_blocked_sets, verbose=False)
                 # print(f"(l={self._level}) bool_ = {bool_}; facets={facets} \n")
-                # if self.debug_counter == 20000:
-                #     exit(0)
-                if not bool_:
+                if bool_:
+                    facets = [self.exempt_vids + list(s) for s in facets]
+                    # print(f"(l={self._level}) bool_ = {bool_}; facets={facets} We shall stop. \n")
+                    self.current_facets = current_facets
+                    # print(
+                    #     f"(l={self._level}) Now we define, for the first time, self.current_facets = {current_facets} \n")
+
+                    # Experimental
+                    # all_facets = self.current_facets + [self.exempt_vids + list(s) for s in facets] + self.collected_facets
+                    all_facets = self.current_facets + [self.exempt_vids + list(s) for s in
+                                                        facets] + self.collected_facets
+                    self.callback_data[self._level] = all_facets
+
+                    # If the above experiment failed, fall back to...
+                    # self.callback_data[self._level] = facets
+                    # return bool_, 0
+                    raise WeCanStopSignal
+                else:
                     return bool_, "333"
 
         return True, "0"
+
+    def _recursive_is_simplicial(self, degs, sizes, blocked_sets=None, verbose=False) -> (bool, list):
+        try:
+            st = SimplicialTest(degs, sizes, level=self._level, blocked_sets=blocked_sets, verbose=verbose)
+            bool_, facets = st.is_simplicial(greedy=True)  # facets: facets from a deeper level
+        except (KeyError, NotImplementedError):
+            # print(f"Recursive call result: (l={self._level}) signal from l={self._level + 1} rcvd; not simplicial.")
+            return False, list()
+        if bool_:
+            # print(
+            #     f"Recursive call result: (l={self._level}) signal from l={self._level + 1} rcvd; SIMPLICIAL. Sending back enlarged facets. (starting to transform...)")
+            # current_facets = self.identifier2facets(identifier) + [candidate_facet]
+            # print(f"(l={self._level}) The facets that were collected from a deeper level (i.e., l={self._level + 1}) = {facets}")
+            # current_facets = self.identifier2facets() + facets[self._level + 1]  # TODO note: perhaps we DO NOT need self.identifier2facets()
+            # print(
+            #     f"(l={self._level}) Transforming... {facets[self._level + 1]}")
+            # transform the facets collected from a deeper level
+            return True, get_enlarged_seq(self.mapping2enlarged, facets[self._level + 1])
+
+            # return True, get_enlarged_seq(degs, st.identifier2facets())
+        else:
+            # print(f"Recursive call result: (l={self._level}) signal from l={self._level + 1} rcvd; not simplicial.")
+            return False, list()
 
     def validate_reduced_seq(self, both, curent_sizes, current_facets) -> bool:
         self.reduced_data = None
@@ -320,7 +391,7 @@ class SimplicialTest(SimplexRegistrar):
         # print(f"START validate_reduced_seq:: (both, curent_sizes, current_facets) = {both, curent_sizes, current_facets}")
         curent_sizes = np.array(curent_sizes, dtype=np.int_)
         shielding_facets = []
-        exempt_vids = []
+        self.exempt_vids = list()
         while Counter(both)[len(curent_sizes)] != 0:
             if len(curent_sizes) > 1:
                 if not basic_validations_degs_and_sizes(degs=both, sizes=curent_sizes):
@@ -330,7 +401,8 @@ class SimplicialTest(SimplexRegistrar):
             must_be_filled_vids = np.where(both == len(curent_sizes))[0]
 
             # print(f"START get_nshielding:: (both, curent_sizes, current_facets) = {both, curent_sizes, current_facets}")
-            shielding_facets = get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, exempt_vids=exempt_vids)
+            shielding_facets = get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids,
+                                                                     exempt_vids=self.exempt_vids)
             # print(f"Before (get_nonshielding_vids) shielding_facets = {shielding_facets}; {np.nonzero(both)}")
             nonshielding_vids = get_nonshielding_vids(shielding_facets, both)
             # print(f"After (get_nonshielding_vids) nonshielding_vids = {nonshielding_vids}")
@@ -341,8 +413,8 @@ class SimplicialTest(SimplexRegistrar):
 
             if Counter(curent_sizes)[0] == len(curent_sizes):
                 # print(f"both = {both}; must_be_filled_vids={must_be_filled_vids}")
-                self.collected_facets += [exempt_vids + must_be_filled_vids.tolist()]
-                # print(f"Adding {exempt_vids + [must_be_filled_vids]} to collected_facets")
+                self.collected_facets += [self.exempt_vids + must_be_filled_vids.tolist()]
+                # print(f"Adding {self.exempt_vids + [must_be_filled_vids]} to collected_facets")
 
                 # print(3, curent_sizes, "###### BREAK #########")
                 both[both == len(curent_sizes)] = 0
@@ -363,29 +435,20 @@ class SimplicialTest(SimplexRegistrar):
                     return True
                 else:
                     curent_sizes = curent_sizes[curent_sizes != 1]
-                    # print(f"removed_sites = {removed_sites}; must_be_filled_vids={must_be_filled_vids}; exempt_vids={exempt_vids}")
-                    to_be_added_facets = [exempt_vids + must_be_filled_vids.tolist() + [s] for s in removed_sites]
+                    # print(f"removed_sites = {removed_sites}; must_be_filled_vids={must_be_filled_vids}; exempt_vids={self.exempt_vids}")
+                    to_be_added_facets = [self.exempt_vids + must_be_filled_vids.tolist() + [s] for s in removed_sites]
                     # print(f"to_be_added_facets = {to_be_added_facets}")
                     self.collected_facets += to_be_added_facets
                     # print(f"Adding {[list(removed_sites) + list(must_be_filled_vids)]} to collected_facets")
-            exempt_vids += must_be_filled_vids.tolist()
-            # print(f"exempt_vids = {exempt_vids}")
+            self.exempt_vids += must_be_filled_vids.tolist()
+            # print(f"exempt_vids = {self.exempt_vids}")
         # print(
         #     f"END validate_reduced_seq:: (both, curent_sizes, shielding_facets) = {both, curent_sizes, shielding_facets} \n")
         self.reduced_data = (both, curent_sizes, shielding_facets)
+        # print(f"(l={self._level}) After defining reduced_data, we also have collected_facets={self.collected_facets}")
+        # print(f"(l={self._level}) After defining reduced_data, we also have exempt_vids={self.exempt_vids}")
         # print(6)
         return False
-
-    def _recursive_is_simplicial(self, degs, sizes, blocked_sets=None, verbose=False) -> (bool, list):
-        try:
-            st = SimplicialTest(degs, sizes, level=self._level, blocked_sets=blocked_sets, verbose=verbose)
-            bool_ = st.is_simplicial(greedy=True)
-        except (KeyError, NotImplementedError):
-            return False, list()
-        if bool_:
-            return True, get_reduced_seq(degs, st.identifier2facets())
-        else:
-            return False, list()
 
     def get_remaining_slots(self, identifier, facet, only_non_shielding=False):
         """
@@ -470,16 +533,17 @@ class SimplicialTest(SimplexRegistrar):
 
         return picked_facet, picked_facet_id
 
-    def is_simplicial(self, greedy=False) -> bool:
+    def is_simplicial(self, greedy=False) -> (bool, dict):
         if self._validate_data():
-            return True
+            # print(f"Congrats! 1")
+            return True, dict()  # TODO, it should be facets instead of dict()
         elif self._validate_data() is False:
-            return False
+            return False, dict()
 
         # match_ones
         ind, self._sorted_s, self._sorted_d, matching_isolated = match_ones(self._sorted_s, self._sorted_d)
         if not ind:
-            return False
+            return False, dict()
         else:
             self.m = len(self._sorted_s)
             self.n = len(self._sorted_d)
@@ -489,16 +553,34 @@ class SimplicialTest(SimplexRegistrar):
         self._break_symmetry(greedy=greedy)
         if len(self._sorted_s) == 0:
             if sorted(self.deg_seq, reverse=True) == self._sorted_d.tolist():  # TODO: start from identifier
-                return True
+                # print(f"Congrats! 2")
+                return True, dict()  # TODO, it should be facets instead of dict()
             else:
-                return False
+                return False, dict()
 
         while self._counter < 1e4:
             if len(self.logbook) == self._len_logbook:
                 self._counter += 1
             s = self._sorted_s[0]
             self._sorted_s = np.delete(self._sorted_s, 0)
-            picked_facet, picked_facet_id = self.sample_simplex(s, greedy=greedy)
+            # picked_facet, picked_facet_id = self.sample_simplex(s, greedy=greedy)
+            try:
+                picked_facet, picked_facet_id = self.sample_simplex(s, greedy=greedy)
+            except WeCanStopSignal:
+                # parse signal
+                # print(
+                #     f"(1) Congrats! We are ending l={self._level} and send {self.callback_data} back to l={self._level - 1} \n")
+                if self._level - 1 == 0:  # the very first level
+                    # current_facets = self.identifier2facets() + self.callback_data[self._level]
+                    # current_facets = self.callback_data[self._level]
+                    # print(f"At l={self._level}, we are now enlarging callback_data={self.callback_data[self._level]} as the final answer")
+                    # print(f"At l={self._level}, we also have self.current_facets={self.current_facets}")
+                    # print(f"At l={self._level}, we also have self.collected_facets={self.collected_facets}")
+                    # all_facets = self.current_facets + self.callback_data[self._level] + self.collected_facets
+                    # return True, all_facets
+                    return True, self.callback_data[self._level]
+                    # return True, get_enlarged_seq(self.mapping2enlarged, current_facets)
+                return True, self.callback_data
             if len(picked_facet) == 0:
                 self._sorted_s = np.insert(self._sorted_s, 0, s)
                 self._pull_the_plug(self._backtrack_steps)
@@ -517,7 +599,10 @@ class SimplicialTest(SimplexRegistrar):
             # Here, assuming our algorithm is all good, we want to check if we indeed find the simplicial complex
             if len(self._sorted_s) == 0:
                 if sorted(self.deg_seq, reverse=True) == self._sorted_d.tolist():  # TODO: start from identifier
-                    return True
+                    self.callback_data[self._level] = self.identifier2facets()
+                    # print(
+                    #     f"(2) Congrats! We are ending l={self._level} and send {self.callback_data} back to l={self._level - 1}")
+                    return True, self.callback_data
                 else:
                     # Backtrack
                     self.log_forbidden(self.identifier, 3)
@@ -525,7 +610,7 @@ class SimplicialTest(SimplexRegistrar):
             if len(self.logbook) > self._len_logbook:
                 self._counter = 0
                 self._len_logbook = len(self.logbook)
-        return False
+        return False, dict()
 
     def _pull_the_plug(self, times=1) -> None:
         if not len(self.identifier) > times:

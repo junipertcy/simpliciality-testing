@@ -18,6 +18,20 @@ class NoSlotError(Exception):
             return 'NoSlotError has been raised'
 
 
+class WeCanStopSignal(Exception):
+    def __init__(self, *args):
+        if args:
+            self.message = args[0]
+        else:
+            self.message = None
+
+    def __str__(self):
+        if self.message:
+            return f'WeCanStopSignal {self.message}'
+        else:
+            return 'WeCanStopSignal has been raised'
+
+
 class SimplexRegistrar(object):
     def __init__(self):
         self.pointer = 0
@@ -42,7 +56,7 @@ class SimplexRegistrar(object):
         }
 
 
-def transform_facets(facets, inv_map):
+def shrink_facets(facets, inv_map):
     sets = []
     for facet in facets:
         transformed_facet = []
@@ -305,12 +319,14 @@ def match_ones(sorted_s, sorted_d):
     return True, sorted_s, sorted_d, matching_isolated
 
 
-def get_reduced_seq(degs, facets) -> list:
-    mapping = get_reduced_seq_mapping(degs)
-    return list(map(lambda x: tuple(map(lambda y: mapping[y], x)), facets))
+def get_enlarged_seq(mapping2enlarged, facets) -> list:
+    # _, mapping = get_seq2seq_mapping(degs)
+    reduced_facets = list(map(lambda x: tuple(map(lambda y: mapping2enlarged[y], x)), facets))
+    # print(f"The facets above have been `enlarged` (i.e., higher-level) to: {reduced_facets}")
+    return reduced_facets
 
 
-def get_reduced_seq_mapping(degs):
+def get_seq2seq_mapping(degs):
     old2new = dict()
     for idx, _deg in enumerate(degs):
         old2new[idx] = _deg
@@ -327,8 +343,10 @@ def get_reduced_seq_mapping(degs):
             inv_old2new[key][idx] = _idx
             _idx += 1
 
-    mapping = dict()
+    mapping2enlarged = dict()
     for key in inv_old2new.keys():
         for idx, new_key in enumerate(inv_old2new[key]):
-            mapping[new_key] = _inv_old2new[key][idx]
-    return mapping
+            mapping2enlarged[new_key] = _inv_old2new[key][idx]
+
+    mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
+    return mapping2shrinked, mapping2enlarged
