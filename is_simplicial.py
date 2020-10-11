@@ -10,9 +10,9 @@ def is_simplicial(degree_sequence, size_sequence, greedy):
     degree_sequence = list(map(int, degree_sequence.read().replace("\n", "").split(" ")))
     size_sequence = list(map(int, size_sequence.read().replace("\n", "").split(" ")))
     st = SimplicialTest(degree_sequence, size_sequence)
-    result = st.is_simplicial(greedy=greedy, preprocess=True)
+    result, facets = st.is_simplicial(greedy=greedy)
     if result is True:
-        print(f"Yes, the joint sequence is simplicial. \nThe complex is: {st.identifier2facets(st.identifier)}")
+        print(f"Yes, the joint sequence is simplicial. \nThe complex is: {facets}")
     else:
         print("No, it cannot form a simplicial complex.")
 
