@@ -32,6 +32,20 @@ class WeCanStopSignal(Exception):
             return 'WeCanStopSignal has been raised'
 
 
+class NoMoreBalls(Exception):
+    def __init__(self, *args):
+        if args:
+            self.message = args[0]
+        else:
+            self.message = None
+
+    def __str__(self):
+        if self.message:
+            return f'{self.message}'
+        else:
+            return 'NoMoreBalls has been raised'
+
+
 class SimplexRegistrar(object):
     def __init__(self):
         self.pointer = 0
@@ -57,7 +71,7 @@ class SimplexRegistrar(object):
 
 
 def shrink_facets(facets, inv_map):
-    sets = []
+    _facets = []
     for facet in facets:
         transformed_facet = []
         for _ in facet:
@@ -65,8 +79,22 @@ def shrink_facets(facets, inv_map):
                 transformed_facet += [inv_map[_]]
             except KeyError:
                 pass
-        sets += [transformed_facet]
-    return sets
+        _facets += [sorted(transformed_facet)]
+    _facets.sort(key=len)
+    return _facets
+
+
+def shrink_degs(degs, inv_map):
+    d = dict()
+    for idx, _degs in enumerate(degs):
+        try:
+            d[inv_map[idx]] = _degs
+        except KeyError:
+            pass
+    d_list = list()
+    for idx, _d in enumerate(d.values()):
+        d_list += [d[idx]]
+    return np.array(d_list, dtype=np.int_)
 
 
 def get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, exempt_vids=list()) -> (bool, set, list):
@@ -88,7 +116,8 @@ def get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, e
     # print("-> must_be_filled_vids are ", must_be_filled_vids)
     shielding_facets = list()
     for facet in current_facets:  # for all existing facets
-        if set(must_be_filled_vids).issubset(set(facet)) and set(exempt_vids).issubset(set(facet)):  # if a facet contains these must_be_filled_vids
+        if set(must_be_filled_vids).issubset(set(facet)) and set(exempt_vids).issubset(
+                set(facet)):  # if a facet contains these must_be_filled_vids
             shielding_facets += [facet]
     return shielding_facets  # then we must avoid the slots in these shielding_facets
 
@@ -118,59 +147,6 @@ def basic_validations_degs_and_sizes(degs, sizes):
     if len(degs) == np.max(sizes):
         return False
     return True
-
-
-def accel_asc(n, size, counter):
-    """
-    Modified from: http://jeromekelleher.net/tag/integer-partitions.html
-
-    Parameters
-    ----------
-    n
-    size
-    counter
-
-    Returns
-    -------
-
-    """
-    a = [0 for _ in range(n + 1)]
-    k = 1
-    y = n - 1
-    while k != 0:
-        x = a[k - 1] + 1
-        k -= 1
-        while 2 * x <= y:
-            a[k] = x
-            y -= x
-            k += 1
-        l = k + 1
-        while x <= y:
-            a[k] = x
-            a[l] = y
-            if len(a[:k + 2]) == size:
-                _counter = Counter(a[:k + 2])
-                indicator = True
-                for _ in _counter:
-                    if _counter[_] > counter[_]:
-                        indicator = False
-                        break
-                if indicator:
-                    yield a[:k + 2]
-            x += 1
-            y -= 1
-        a[k] = x + y
-        y = x + y - 1
-        if len(a[:k + 1]) == size:
-            _counter = Counter(a[:k + 1])
-
-            indicator = True
-            for _ in _counter:
-                if _counter[_] > counter[_]:
-                    indicator = False
-                    break
-            if indicator:
-                yield a[:k + 1]
 
 
 def remove_ones(s, both, choose_from=set()):
@@ -304,21 +280,6 @@ def sort_helper(st) -> list:
     return translated
 
 
-def match_ones(sorted_s, sorted_d):
-    _s = Counter(sorted_s)[1]
-    _d = Counter(sorted_d)[1]
-    matching_isolated = 0
-    if _s > _d:
-        print("Too many 0-simplices. We cannot satisfy the inclusive constraint.")
-        return False, list(), list(), 0
-    else:
-        for _ in range(_s):
-            sorted_s = np.delete(sorted_s, -1)
-            sorted_d = np.delete(sorted_d, -1)
-            matching_isolated += 1
-    return True, sorted_s, sorted_d, matching_isolated
-
-
 def get_enlarged_seq(mapping2enlarged, facets) -> list:
     # _, mapping = get_seq2seq_mapping(degs)
     reduced_facets = list(map(lambda x: tuple(map(lambda y: mapping2enlarged[y], x)), facets))
@@ -350,3 +311,36 @@ def get_seq2seq_mapping(degs):
 
     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
     return mapping2shrinked, mapping2enlarged
+
+
+def compute_joint_seq(facets) -> (list, list):
+    # print(facets)
+    flattened_facets = [item for sublist in facets for item in sublist]
+    n = max(flattened_facets) - min(flattened_facets) + 1
+    degs = np.zeros(n, dtype=np.int_)
+    sizes = []
+
+    for facet in facets:
+        sizes += [len(facet)]
+        for vertex_id in facet:
+            degs[vertex_id] += 1
+
+    return sorted(sizes, reverse=True), sorted(degs, reverse=True)
+
+
+def if_facets_simplicial(facets) -> bool:
+    for idx1, facet1 in enumerate(sorted(facets, key=len)):
+        for idx2, facet2 in enumerate(sorted(facets, key=len)):
+            if idx2 > idx1:
+                if set(list(facet1)).issubset(set(list(facet2))):
+                    return False
+    return True
+
+
+def filter_blocked_facets(blocked_facets, exempt_vids):
+    # print(f"in filter_blocked_facets (blocked_facets, exempt_vids) = {(blocked_facets, exempt_vids)}")
+    filtered = []
+    for facet in blocked_facets:
+        if set(exempt_vids).issubset(facet):
+            filtered += [facet]
+    return filtered
