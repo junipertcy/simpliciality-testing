@@ -5,13 +5,15 @@ from SimplicialTest import *
 @click.command()
 @click.option('-k', '--degree_seq_file', 'degree_sequence', type=click.File('r'), help='Path to degree sequence file.')
 @click.option('-s', '--size_seq_file', 'size_sequence', type=click.File('r'), help='Path to size sequence file.')
-@click.option('--greedy/--no-greedy', default=False, help='Enable the Havel–Hakimi-type recursive algorithm.')
-def is_simplicial(degree_sequence, size_sequence, greedy):
+def is_simplicial(degree_sequence, size_sequence):
     degree_sequence = list(map(int, degree_sequence.read().replace("\n", "").split(" ")))
     size_sequence = list(map(int, size_sequence.read().replace("\n", "").split(" ")))
-    st = SimplicialTest(degree_sequence, size_sequence)
-    result, facets = st.is_simplicial(greedy=greedy)
-    if result is True:
+    is_simplicial, facets = SimplicialTest(degree_sequence, size_sequence).is_simplicial()
+    if is_simplicial is True:
+        joint_seqs = compute_joint_seq(facets)
+        assert if_facets_simplicial(facets) is True
+        assert joint_seqs[0] == sorted(size_sequence, reverse=True)
+        assert joint_seqs[1] == sorted(degree_sequence, reverse=True)
         print(f"Yes, the joint sequence is simplicial. \nThe complex is: {facets}")
     else:
         print("No, it cannot form a simplicial complex.")

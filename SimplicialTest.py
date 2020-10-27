@@ -2,7 +2,6 @@ import time
 import validators
 
 from utils import *
-from math import comb
 from operator import itemgetter
 from itertools import combinations
 
@@ -46,10 +45,7 @@ class SimplicialTest(SimplexRegistrar):
         self.deg_seq = np.zeros(self.n, dtype=np.int_)
         self.identifier = list()
 
-        self._backtrack_steps = 0
         self._counter = 0
-        self._len_logbook = 0
-
 
         if blocked_sets is None:
             self.blocked_sets = list()
@@ -63,7 +59,7 @@ class SimplicialTest(SimplexRegistrar):
 
         self.mapping2shrinked = dict()
         self.mapping2enlarged = dict()
-        self.level_toggle = False
+
         self._DEGREE_LIST = _degree_list
         if self._DEGREE_LIST is None:
             self._DEGREE_LIST = self.DEGREE_LIST
@@ -73,33 +69,23 @@ class SimplicialTest(SimplexRegistrar):
             self.level_map[self._level] = dict()
             for _ in range(self.n):
                 self.level_map[self._level][_] = None
-        # print(f"(l={self._level}) deg, size, blocked_sets = {self.DEGREE_LIST, self.SIZE_LIST, self.blocked_sets}")
+        # print(f"(l={self._level}) deg, size, blocked_sets = {self.DEGREE_LIST, self.SIZE_LIST, self.blocked_sets} \n")
 
     def prioritize(self):
+        if len(self.blocked_sets) == 0:
+            s = defaultdict(int)
+        else:
+            s = Counter(self.blocked_sets[0])
+        shielding = []
+        non_shielding = []
         if self._level == 1:
-            if len(self.blocked_sets) == 0:
-                s = defaultdict(int)
-            else:
-                s = Counter(self.blocked_sets[0])
-            shielding = []
-            non_shielding = []
             for _ in range(self.n):
                 if self._sorted_d[_] - self.deg_seq[_] > 0:
                     if s[_] == 1:
                         shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
                     else:
                         non_shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
-            non_shielding = sorted(non_shielding, key=itemgetter(1), reverse=True)  # originally: 1, true.... exp: 2, false
-            shielding = sorted(shielding, key=itemgetter(1), reverse=True)  # originally: 2, true
-            non_shielding = list(map(lambda x: x[0], non_shielding))
-            shielding = list(map(lambda x: x[0], shielding))
         else:
-            if len(self.blocked_sets) == 0:
-                s = defaultdict(int)
-            else:
-                s = Counter(self.blocked_sets[0])
-            shielding = []
-            non_shielding = []
             remaining_degs = self.DEGREE_LIST - self.compute_joint_seq_from_identifier(sorted_deg=False)[1]
             for _ in self.level_map[1].keys():
                 if self.level_map[self._level - 1][_] is None:
@@ -110,10 +96,10 @@ class SimplicialTest(SimplexRegistrar):
                     shielding += [(self.level_map[self._level - 1][_], self._DEGREE_LIST[_])]
                 else:
                     non_shielding += [(self.level_map[self._level - 1][_], self._DEGREE_LIST[_])]
-            non_shielding = sorted(non_shielding, key=itemgetter(1), reverse=True)
-            shielding = sorted(shielding, key=itemgetter(1), reverse=True)
-            non_shielding = list(map(lambda x: x[0], non_shielding))
-            shielding = list(map(lambda x: x[0], shielding))
+        non_shielding = sorted(non_shielding, key=itemgetter(1), reverse=True)
+        shielding = sorted(shielding, key=itemgetter(1), reverse=True)
+        non_shielding = list(map(lambda x: x[0], non_shielding))
+        shielding = list(map(lambda x: x[0], shielding))
 
         return shielding, non_shielding
 
@@ -194,36 +180,37 @@ class SimplicialTest(SimplexRegistrar):
             return True, "0"
         _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
         if np.min(_both) < 0:
-            return False, "13"
+            return False, "1"
         #
         if len(_sizes) == 1:
             for facet in current_facets:
                 if set(np.nonzero(_both)[0]).issubset(set(facet)):
-                    return False, "12"
+                    return False, "2"
         #
         if np.any(_both > len(_sizes)):
-            return False, "4"
+            return False, "3"
         if np.sum(_both) > np.count_nonzero(_both) == _sizes[0]:
-            return False, "2"
+            return False, "4"
 
         _non_shielding = self.get_remaining_slots(identifier, candidate_facet, only_non_shielding=True)
         _shielding = _both - _non_shielding  # only shielding
 
         if np.min(_non_shielding) < 0:
-            return False, "14"
+            return False, "5"
         #
         if validators.validate_nonshielding(_sizes, _non_shielding, _shielding):
-            return False, "5"
+            return False, "6"
         if np.count_nonzero(_both) < _sizes[0]:
-            return False, "3"
+            return False, "7"
 
         for blocked_set in self.blocked_sets:
             if set(np.nonzero(_both)[0]).issubset(set(blocked_set)):
-                return False, "11"
+                return False, "8"
+
         if Counter(_both)[len(_sizes)] > 0:
             _ = validators.validate_reduced_seq(_both, _sizes, current_facets)
             if _[0]:
-                return False, "6"
+                return False, "9"
             _both, _sizes, self.collected_facets, self.exempt_vids = _[1]
             if np.sum(_both) == np.sum(_sizes) == 0:
                 for facet in current_facets:
@@ -231,12 +218,13 @@ class SimplicialTest(SimplexRegistrar):
                         if set(collected_facet).issubset(set(facet)):
                             return False, "10"
                 return True, "0"
+        else:
+            self.exempt_vids = []
+            self.collected_facets = []
         self.mapping2shrinked, self.mapping2enlarged = get_seq2seq_mapping(_both)
         filtered = filter_blocked_facets(current_facets + self.blocked_sets, self.exempt_vids)
         _blocked_sets = shrink_facets(filtered, self.mapping2shrinked)
 
-        if candidate_facet == (0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 14, 15):
-            self.verbose = True
         try:
             self._compute_level_map()
             bool_, facets = self._recursive_is_simplicial(
@@ -247,7 +235,7 @@ class SimplicialTest(SimplexRegistrar):
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
-            if int(str(e)) <= 2:
+            if int(str(e)) <= 3:
                 # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
                 return False, "keep looking for balls!"
             else:
@@ -258,9 +246,15 @@ class SimplicialTest(SimplexRegistrar):
             self.current_facets = current_facets
             all_facets = self.current_facets + facets + self.collected_facets
             self.callback_data[self._level] = all_facets
+            # print(
+            #     f"(l={self._level}) WeCanStopSignal fired::"
+            #     f"id2name: {self.id2name} "
+            #     f"accept {candidate_facet}, callback_data: {all_facets};"
+            #     f"... within which facets={facets}, current_facets={self.current_facets}, collected_facets={self.collected_facets}; \n"
+            # )
             raise WeCanStopSignal
         else:
-            return bool_, "333"
+            return bool_, "11"
 
     def _recursive_is_simplicial(self,
                                  degs,
@@ -285,6 +279,7 @@ class SimplicialTest(SimplexRegistrar):
             raise NoMoreBalls(self._level)
         if bool_:
             # transform the facets collected from a deeper level
+            # print(f"(l={self._level} 2enlarged={self.mapping2enlarged}; 2shrinked={self.mapping2shrinked}, exempt_vids={self.exempt_vids}")
             return True, get_enlarged_seq(self.mapping2enlarged, facets[self._level + 1])
         else:
             return False, list()
@@ -345,7 +340,8 @@ class SimplicialTest(SimplexRegistrar):
             else:
                 return False, dict()
 
-        while self._counter < 1:
+        while self._counter < 1e3:
+            self._counter += 1
             s = self._sorted_s[0]
             self._sorted_s = np.delete(self._sorted_s, 0)
             try:
@@ -371,6 +367,7 @@ class SimplicialTest(SimplexRegistrar):
                     self.callback_data[self._level] = self.identifier2facets()
                     if self._level - 1 == 0:  # the very first level
                         return True, self.callback_data[self._level]
+                    # print(f"(l={self._level}) Sending back {self.callback_data}")
                     return True, self.callback_data
         return False, dict()
 
@@ -403,4 +400,3 @@ class SimplicialTest(SimplexRegistrar):
         for _id in identifier:
             facets += [self.id2name[_id]]
         return facets
-
