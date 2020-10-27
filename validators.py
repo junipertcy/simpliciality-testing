@@ -130,7 +130,7 @@ def validate_issubset_blocked_sets(candidate_facet, blocked_sets=None):
     if blocked_sets is not None:
         for facet in blocked_sets:
             # if verbose:
-                # print(candidate_facet, facet, set(candidate_facet).issubset(set(facet)))
+            # print(candidate_facet, facet, set(candidate_facet).issubset(set(facet)))
             if set(candidate_facet).issubset(set(facet)):
                 return True
     return False
@@ -159,11 +159,5 @@ def is_reduced_seq(both, sizes, degrees) -> bool:
     return Counter(np.equal(both, degrees))[True] == Counter(both)[len(sizes)]
 
 
-def validate_interm_degs(degs, candidate_facet):
-    deg_seq = np.zeros(len(degs), dtype=np.int_)
-    for _ in candidate_facet:
-        deg_seq[_] += 1
-    if np.all(np.sort(degs) - np.sort(deg_seq) >= 0):
-        return False
-    else:
-        return True
+def validate_interm_degs(degs, intermediate_degs):
+    return np.all(degs - intermediate_degs >= 0)
