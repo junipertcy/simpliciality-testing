@@ -1,7 +1,6 @@
 import numpy as np
 from collections import defaultdict, Counter
 from copy import deepcopy
-import random
 
 
 class NoSlotError(Exception):
@@ -184,10 +183,6 @@ def trim_ones(size_list, degree_list) -> (list, list):
     return size_list, degree_list
 
 
-def flatten(nested_list):
-    return [item for sublist in nested_list for item in sublist]
-
-
 def get_slimmest_d(s):
     """
 
@@ -221,41 +216,6 @@ def get_slimmest_d(s):
         pool.add(tuple(tentative))
         tentative_ = tentative
     return sorted(Counter(flatten(pool)).values(), reverse=True)
-
-
-def gen_joint_sequence(m, poisson_lambda, n_max=0):
-    _size_list = [0]
-    while min(_size_list) == 0:
-        _size_list = sorted(np.random.poisson(lam=poisson_lambda, size=m), reverse=True)
-
-    if n_max == 0:
-        # print(n := np.random.randint(max(_size_list) + 1, np.sum(_size_list) + 1))
-        n_max = np.sum(_size_list)
-    if n_max <= max(_size_list):
-        n_max = max(_size_list) + 1
-
-    facets = []
-    for facet_size in _size_list:
-        candidate_facet = random.sample(range(0, n_max), k=facet_size)
-        qualified_draw = False
-
-        count = 0
-        while not qualified_draw:
-            count += 1
-            if count > 1e5:
-                # print("Re-sample joint sequence at a higher n_max!")
-                n_max += 1
-                return gen_joint_sequence(m, poisson_lambda, n_max)
-            qualified_draw = True
-            for facet in facets:
-                if set(candidate_facet).issubset(facet):
-                    candidate_facet = random.sample(range(0, n_max), k=facet_size)
-                    qualified_draw = False
-                    break
-        facets += [candidate_facet]
-
-    _degree_list = sorted(list(Counter(flatten(facets)).values()), reverse=True)
-    return _size_list, _degree_list
 
 
 def sort_helper(st) -> list:
@@ -344,3 +304,62 @@ def filter_blocked_facets(blocked_facets, exempt_vids):
         if set(exempt_vids).issubset(facet):
             filtered += [facet]
     return filtered
+
+
+# DEPRECATED, possible use methods included
+def get_inv_level_map(level_map):
+    inv_level_map = dict()
+    for key in level_map.keys():
+        inv_level_map[key] = {v: k for k, v in level_map[key].items()}
+
+    # In SimplicialTest.__init__()
+    # self.inv_level_map = get_inv_level_map(self.level_map)
+    #
+    # self.level_ns = level_ns
+    # if self.level_ns is None:
+    #     self.level_ns = dict()
+    #     self.level_ns[self._level] = set()
+    #
+    # In SimplicialTest.sample_simplex_greedy()
+    # if_continue = False
+    # candidate_facet_set = set(list(candidate_facet))
+    #
+    #
+    # leftover_levelwise = dict()
+    # for level in range(1, self._level):
+    #     leftover = dict()
+    #     for _id in self.level_ns[level]:
+    #         try:
+    #             id_at_current_level = self.inv_level_map[level - 1][_id]
+    #             leftover[id_at_current_level] = self._sorted_d[id_at_current_level]
+    #         except KeyError:
+    #             pass
+    #     leftover_levelwise[level] = leftover
+    #     if leftover != dict():
+    #         leftover_values_list = list(leftover.values())
+    #         if np.sum(leftover_values_list) < len(self._sorted_s):
+    #             raise NoMoreBalls()
+    #
+    #
+    #     if leftover == dict():
+    #         continue
+    #     leftover_keys_list = list(leftover.keys())
+    #     leftover_values_list = list(leftover.values())
+    #     leftover_used = len(set(leftover_keys_list).intersection(candidate_facet_set))
+    #     if np.sum(leftover_values_list) - leftover_used < len(self._sorted_s):
+    #         if_continue = True
+    #         print(f"(l={self._level}) leftover is {leftover}; len(self._sorted_s)={len(self._sorted_s)}")
+    #         break
+    # if if_continue:
+    #     print(f"(l={self._level}) {candidate_facet_set} is not good. \n")
+    #     continue
+    #
+    # for key in self.level_ns.keys():
+    #     if key >= self._level:
+    #         self.level_ns[key] = set()
+    #
+    # In SimplicialTest.validate()
+    # self.level_ns[self._level] = set(list(range(len(np.nonzero(self._sorted_d)[0])))).difference(
+    #     set(list(candidate_facet)))
+
+    return inv_level_map

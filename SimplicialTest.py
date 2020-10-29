@@ -63,6 +63,7 @@ class SimplicialTest(SimplexRegistrar):
         self._DEGREE_LIST = _degree_list
         if self._DEGREE_LIST is None:
             self._DEGREE_LIST = self.DEGREE_LIST
+
         self.level_map = level_map
         if self.level_map is None:
             self.level_map = dict()
@@ -70,12 +71,13 @@ class SimplicialTest(SimplexRegistrar):
             for _ in range(self.n):
                 self.level_map[self._level][_] = None
         # print(f"(l={self._level}) deg, size, blocked_sets = {self.DEGREE_LIST, self.SIZE_LIST, self.blocked_sets} \n")
+        # print(f"(l={self._level}) {list(map(lambda x: len(x), self.blocked_sets))}")
 
     def prioritize(self):
         if len(self.blocked_sets) == 0:
             s = defaultdict(int)
         else:
-            s = Counter(self.blocked_sets[0])
+            s = Counter(self.blocked_sets[-1])  # This is critical to efficiency.
         shielding = []
         non_shielding = []
         if self._level == 1:
@@ -103,15 +105,12 @@ class SimplicialTest(SimplexRegistrar):
 
         return shielding, non_shielding
 
-    def get_valid_trials(self, shielding, non_shielding, size):
+    @staticmethod
+    def get_valid_trials(shielding, non_shielding, size):
         shielding_ids = list(map(lambda x: x, shielding))
         non_shielding_ids = list(map(lambda x: x, non_shielding))
         n_s = len(shielding)
         n_ns = len(non_shielding)
-
-        d = Counter()
-        for _ in map(lambda x: Counter(x), self.blocked_sets):
-            d += _
 
         for _ in np.arange(1, n_ns + 1, +1):
             if size - _ > n_s or size - _ < 0:
@@ -138,6 +137,7 @@ class SimplicialTest(SimplexRegistrar):
         identifier = self.identifier
         shielding, non_shielding = self.prioritize()
         valid_trials = self.get_valid_trials(shielding, non_shielding, size)
+
         while True:
             try:
                 candidate_facet = tuple([_ for _ in next(valid_trials)])
@@ -158,7 +158,6 @@ class SimplicialTest(SimplexRegistrar):
                 for key in self.level_map.keys():
                     if key >= self._level:
                         self.level_map[key] = {}
-                pass
 
     def validate(self, identifier, candidate_facet) -> (bool, str):
         """
@@ -197,7 +196,6 @@ class SimplicialTest(SimplexRegistrar):
 
         if np.min(_non_shielding) < 0:
             return False, "5"
-        #
         if validators.validate_nonshielding(_sizes, _non_shielding, _shielding):
             return False, "6"
         if np.count_nonzero(_both) < _sizes[0]:
@@ -279,7 +277,6 @@ class SimplicialTest(SimplexRegistrar):
             raise NoMoreBalls(self._level)
         if bool_:
             # transform the facets collected from a deeper level
-            # print(f"(l={self._level} 2enlarged={self.mapping2enlarged}; 2shrinked={self.mapping2shrinked}, exempt_vids={self.exempt_vids}")
             return True, get_enlarged_seq(self.mapping2enlarged, facets[self._level + 1])
         else:
             return False, list()

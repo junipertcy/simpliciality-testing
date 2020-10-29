@@ -9,10 +9,12 @@ simpliciality_test
    :alt: License
 
 
-explore possible algorithms for simpliciality test
+A constructive greedy algorithm to check whether a joint sequence of degree/size distributions is simplicial.
 
 Proof of concept
-----------------
+------------------------------
+!!! (Not a randomized algorithm anymore. This section needs to re-write.) !!!
+
 First things first, install the required libraries:
 
 ..
@@ -38,11 +40,11 @@ We still lack a proper existence test to check whether a joint sequence is simpl
 Luckily, when the sequence is simplicial, we do find a greedy deterministic algorithm that picks up an simplicial instance!
 This can work in fairly large inputs.
 
-For example,   
+For example,
 
 ..
 
-    python is_simplicial.py -k datasets/01_degs.txt -s datasets/01_sizes.txt --greedy
+    python is_simplicial.py -k datasets/01_degs.txt -s datasets/01_sizes.txt
 
 The dataset is the `crime network dataset`_ from the `Phys. Rev. E paper`_, having 551 nodes and 194 facets.
 
@@ -53,10 +55,49 @@ For example,
 
 ..
 
-    python is_simplicial.py -k datasets/02_degs.txt -s datasets/02_sizes.txt --greedy
+    python is_simplicial.py -k datasets/02_degs.txt -s datasets/02_sizes.txt
 
 
 Interesting? I think it is!
+
+Pilot experiments
+----------------------
+The three figures below show the solution found by the greedy algorithm.
+
+Those black regions denote 1's, whereas white blocks denote 0's.
+Theoretically, at a deeper level, we need to avoid more "blocking facets," but as it turned out,
+we barely need to avoid any blocking facets at later recursive levels, just because of the greedy construction.
+
+.. figure:: figures/first_example.png
+   :width: 400
+   :alt: small first example
+
+   Fig. 1. Small first example.
+
+   We should note that vertices with higher degree will be paired with larger facets, unless such pairing would prohibit
+   a solution. Note also that not any facet is in the subset of another (larger) facet.
+
+The following two datasets come from the inspirational `Phys. Rev. E paper`_. Each of these requires less than 1 second
+to compute!
+
+.. figure:: figures/crime.png
+   :width: 400
+   :alt: map to buried treasure
+
+   Fig. 2. Crimes (nodes, n=829) and suspects, victims, and witnesses (facets, f=378) network in St. Louis.
+
+.. figure:: figures/pollinator.png
+   :width: 400
+   :alt: map to buried treasure
+
+   Fig. 3. Flower-visiting insects (nodes, n=679) and plants (facets f=57) network in Kyoto.
+
+
+
+Number of simplicial sequences which partition n
+------------------------------------------------
+Suppose we have the sequences of degree distribution λ1 and size distribution λ2, each of which partitions n.
+
 
 Installation
 ------------
@@ -66,6 +107,10 @@ This program is tested on major platforms, including Windows. Please see the cor
 MISC notes (to clean up later)
 ------------------------------
 * The graphical `Erdős–Gallai theorem`_.
+
+Acknowledgement
+---------------
+
 
 .. _`Erdős–Gallai theorem`: https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem
 .. _`crime network dataset`: https://github.com/jg-you/scm/blob/master/datasets/crime_facet_list.txt
