@@ -1,0 +1,5 @@
+sphinx-markdown-tables
+sphinx_rtd_theme
+recommonmark
+numpydoc
+mathjax
