@@ -44,7 +44,7 @@ For example,
 
 ..
 
-    python is_simplicial.py -k datasets/01_degs.txt -s datasets/01_sizes.txt
+    python is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
 
 The dataset is the `crime network dataset`_ from the `Phys. Rev. E paper`_, having 551 nodes and 194 facets.
 

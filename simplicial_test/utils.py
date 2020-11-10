@@ -3,6 +3,10 @@ from collections import defaultdict, Counter
 from copy import deepcopy
 
 
+def flatten(nested_list):
+    return [item for sublist in nested_list for item in sublist]
+
+
 class NoSlotError(Exception):
     def __init__(self, *args):
         if args:
@@ -68,6 +72,12 @@ class SimplexRegistrar(object):
             "reason": reason_id
         }
 
+def update_deg_seq(deg_seq, facet, value):
+    if value not in [+1, -1]:
+        raise NotImplementedError
+    for _ in facet:
+        deg_seq[_] += value
+
 
 def shrink_facets(facets, inv_map):
     _facets = []
@@ -78,7 +88,8 @@ def shrink_facets(facets, inv_map):
                 transformed_facet += [inv_map[_]]
             except KeyError:
                 pass
-        _facets += [sorted(transformed_facet)]
+        if len(sorted(transformed_facet)) > 0:
+            _facets += [sorted(transformed_facet)]
     _facets.sort(key=len)
     return _facets
 
@@ -304,6 +315,19 @@ def filter_blocked_facets(blocked_facets, exempt_vids):
         if set(exempt_vids).issubset(facet):
             filtered += [facet]
     return filtered
+
+
+def compute_joint_seq_from_facets(facets):
+    n = max(flatten(facets)) + 1
+    degs = np.zeros(n, dtype=np.int_)
+    sizes = np.zeros(len(facets), dtype=np.int_)
+
+    for idx, facet in enumerate(facets):
+        for vid in facet:
+            degs[vid] += 1
+        sizes[idx] = len(facet)
+
+    return degs, sizes
 
 
 # DEPRECATED, possible use methods included

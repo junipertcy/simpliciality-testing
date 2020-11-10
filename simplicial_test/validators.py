@@ -1,27 +1,19 @@
 import numpy as np
 from collections import Counter
-from utils import NoSlotError, basic_validations_degs_and_sizes, get_shielding_facets_when_vids_filled, \
+from simplicial_test.utils import NoSlotError, basic_validations_degs_and_sizes, get_shielding_facets_when_vids_filled, \
     get_nonshielding_vids, remove_ones
 
 
 def validate_data(sorted_d, sorted_s):
-    n = len(sorted_d)
+    # n = len(sorted_d)
     m = len(sorted_s)
-    if len(sorted_d) == len(sorted_s) == 0:
-        return True
+    if len(sorted_d) == 0 or len(sorted_s) == 0:
+        return False
     if len(sorted_d) > 0 and np.max(sorted_d) > m:
-        # print("1. This can never be simplicial.")  # TODO.... why??
         return False
-    if np.max(sorted_s) >= n:
-        if len(sorted_s) == 1 and np.max(sorted_s) == n:
-            return True
-        else:
-            # print("2. This can not be simplicial.")
-            return False
     if np.sum(sorted_d) != np.sum(sorted_s):
-        # print("Failing the Gale–Ryser criterion (1957), the sequence is not bigraphic.")
         return False
-    # TODO: there is a second part of the GR criterion, which is not coded yet.
+    return True
 
 
 def validate_nonshielding(curent_sizes, non_shielding, shielding):

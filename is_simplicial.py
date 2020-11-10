@@ -1,5 +1,5 @@
 import click
-from SimplicialTest import *
+from simplicial_test.Test import *
 
 
 @click.command()
