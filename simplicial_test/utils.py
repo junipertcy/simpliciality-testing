@@ -72,6 +72,7 @@ class SimplexRegistrar(object):
             "reason": reason_id
         }
 
+
 def update_deg_seq(deg_seq, facet, value):
     if value not in [+1, -1]:
         raise NotImplementedError
@@ -328,6 +329,30 @@ def compute_joint_seq_from_facets(facets):
         sizes[idx] = len(facet)
 
     return degs, sizes
+
+
+def accel_asc(n):
+    """from: http://jeromekelleher.net/generating-integer-partitions.html"""
+    a = [0 for i in range(n + 1)]
+    k = 1
+    y = n - 1
+    while k != 0:
+        x = a[k - 1] + 1
+        k -= 1
+        while 2 * x <= y:
+            a[k] = x
+            y -= x
+            k += 1
+        l = k + 1
+        while x <= y:
+            a[k] = x
+            a[l] = y
+            yield a[:k + 2]
+            x += 1
+            y -= 1
+        a[k] = x + y
+        y = x + y - 1
+        yield a[:k + 1]
 
 
 # DEPRECATED, possible use methods included

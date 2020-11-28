@@ -1,6 +1,11 @@
 import random
-from pysat.examples.hitman import Hitman
 from simplicial_test.utils import *
+
+try:
+    from pysat.examples.hitman import Hitman
+except ModuleNotFoundError:
+    # windows will fail
+    pass
 
 
 def gen_joint_sequence(m, poisson_lambda, n_max=0, size_seq=None):
@@ -41,6 +46,18 @@ def gen_joint_sequence(m, poisson_lambda, n_max=0, size_seq=None):
     return sorted(_size_list, reverse=True), _degree_list, facets
 
 
+def get_hitting_sets(facets, created_vids):
+    ns_slots = []
+    for facet in facets:
+        ns_slots += [list(created_vids.difference(set(facet)))]
+    # print(f"ns_slots = {ns_slots}")
+    hs_list = []
+    with Hitman(bootstrap_with=ns_slots, htype='sorted') as hitman:
+        for hs in hitman.enumerate():
+            hs_list += [hs]
+    return hs_list
+
+
 def gen_joint_sequence_from_sizes(size_seq, p=0.2):
     size_seq = sorted(size_seq, reverse=True)
     _size_list = sorted(size_seq, reverse=True)
@@ -59,19 +76,11 @@ def gen_joint_sequence_from_sizes(size_seq, p=0.2):
     while len(size_seq) > 0:
         token = False
         _s = size_seq.pop(0)
-        ns_slots = []
         created_vids = set(list(vid_registar.keys()))
-
         if random.random() < p:  # create a new group
             token = True
         else:
-            for facet in facets:
-                ns_slots += [list(created_vids.difference(set(facet)))]
-            # print(f"ns_slots = {ns_slots}")
-            hs_list = []
-            with Hitman(bootstrap_with=ns_slots, htype='sorted') as hitman:
-                for hs in hitman.enumerate():
-                    hs_list += [hs]
+            hs_list = get_hitting_sets(facets, created_vids)
             # print(f"hs_list = {hs_list}")
             if len(hs_list) == 0:
                 token = True
@@ -125,26 +134,3 @@ def relabel(facets):
         _facets += [_facet]
     return _facets
 
-
-def accel_asc(n):
-    """from: http://jeromekelleher.net/generating-integer-partitions.html"""
-    a = [0 for i in range(n + 1)]
-    k = 1
-    y = n - 1
-    while k != 0:
-        x = a[k - 1] + 1
-        k -= 1
-        while 2 * x <= y:
-            a[k] = x
-            y -= x
-            k += 1
-        l = k + 1
-        while x <= y:
-            a[k] = x
-            a[l] = y
-            yield a[:k + 2]
-            x += 1
-            y -= 1
-        a[k] = x + y
-        y = x + y - 1
-        yield a[:k + 1]

@@ -30,13 +30,14 @@ This module contains a greedy algorithm for checking simpliciality.
 """
 from simplicial_test.Test import *
 from simplicial_test.utils import *
+from simplicial_test.enumeration import *
 from simplicial_test.sample import *
-
 
 __package__ = 'simplicial_test'
 __title__ = 'simplicial_test: A greedy algorithm to check whether a joint sequence of degree/size distributions is simplicial'
 __description__ = ''
 __copyright__ = 'Copyright 2020- Tzu-Chi Yen'
+__license__ = "GPL version 3"
 __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
@@ -49,9 +50,15 @@ Test.__test__ = False
 
 __all__ = [
     "Test",
+    "EnumRegistrar",
+    "Enum",
+    "get_hitting_sets",
     "compute_joint_seq",
+    "flatten",
     "if_facets_simplicial",
+    "gen_joint_sequence_from_sizes",
     "accel_asc",
+    "NoMoreBalls",
     "__author__",
     "__URL__",
     "__version__",

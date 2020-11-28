@@ -107,6 +107,7 @@ This program is tested on major platforms, including Windows. Please see the cor
 MISC notes (to clean up later)
 ------------------------------
 * The graphical `Erdős–Gallai theorem`_.
+* The number of partitions of n (the partition numbers): OEIS:`A000041`_.
 
 Acknowledgement
 ---------------
@@ -115,4 +116,5 @@ Acknowledgement
 .. _`Erdős–Gallai theorem`: https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem
 .. _`crime network dataset`: https://github.com/jg-you/scm/blob/master/datasets/crime_facet_list.txt
 .. _`Phys. Rev. E paper`: https://doi.org/10.1103/PhysRevE.96.032312
+.. _`A000041`: https://oeis.org/A000041
 .. _`Travis CI tests`: https://travis-ci.org/github/junipertcy/simpliciality_test

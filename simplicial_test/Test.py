@@ -1,10 +1,11 @@
-import sys
 from simplicial_test import validators
-# from pysat.examples.hitman import Hitman
-
 from simplicial_test.utils import *
 from operator import itemgetter
 from itertools import combinations
+
+from .mongo import DB
+
+import sys
 
 sys.setrecursionlimit(10 ** 6)
 
@@ -19,13 +20,15 @@ class Test(SimplexRegistrar):
     size_list : ``iterable`` or :class:`numpy.ndarray`, required
 
     """
+
     def __init__(
             self,
             degree_list,
             size_list,
             level=0,
             blocked_sets=None,
-            _degree_list=None,
+            _dlist=None,
+            _slist=None,
             level_map=None,
             verbose=False):
         super().__init__()
@@ -56,9 +59,16 @@ class Test(SimplexRegistrar):
         self.mapping2shrinked = dict()
         self.mapping2enlarged = dict()
 
-        self._DEGREE_LIST = _degree_list
+        self._DEGREE_LIST = _dlist
         if self._DEGREE_LIST is None:
             self._DEGREE_LIST = self.DEGREE_LIST
+        self._SIZE_LIST = _slist
+        if self._SIZE_LIST is None:
+            self._SIZE_LIST = self.SIZE_LIST
+
+        self.conn = DB("simplicial", "deadends", self._DEGREE_LIST.tolist(), self._SIZE_LIST.tolist())
+        if level == 0:
+            self.conn.init()
 
         self._level = level + 1
         self.level_map = level_map
@@ -237,21 +247,25 @@ class Test(SimplexRegistrar):
                 _both, _sizes,
                 blocked_sets=_blocked_sets,
                 level_map=self.level_map,
-                _degree_list=self._DEGREE_LIST,
+                _dlist=self._DEGREE_LIST,
+                _slist=self._SIZE_LIST,
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
-            if int(str(e)) <= 5:
+            if int(str(e)) <= 10:
                 self.num_failures += 1
-                if self.num_failures > 10:
+                if self.num_failures > 5:
+                    self.conn.add_to_failed_attempts()
                     # print(f"(l={self._level}) to many fails; skip this level")
                     raise NoMoreBalls
                 # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
-                print(f"(l={self._level}) keep looking")
+                # print(f"(l={self._level}) keep looking")
+                self.conn.add_to_failed_attempts()
                 return False, "keep looking for balls!"
             else:
                 # forget about this level
-                print(f"(l={self._level}) skip this level")
+                self.conn.add_to_failed_attempts()
+                # print(f"(l={self._level}) skip this level")
                 raise NoMoreBalls
         if bool_:
             facets = [self.exempt_vids + list(s) for s in facets]
@@ -273,7 +287,8 @@ class Test(SimplexRegistrar):
                                  sizes,
                                  blocked_sets=None,
                                  level_map=None,
-                                 _degree_list=None,
+                                 _dlist=None,
+                                 _slist=None,
                                  verbose=False) -> (bool, list):
 
         try:
@@ -283,7 +298,8 @@ class Test(SimplexRegistrar):
                 level=self._level,
                 blocked_sets=blocked_sets,
                 level_map=level_map,
-                _degree_list=self._DEGREE_LIST,
+                _dlist=self._DEGREE_LIST,
+                _slist=self._SIZE_LIST,
                 verbose=verbose
             )
             bool_, facets = st.is_simplicial()  # facets: facets from a deeper level
@@ -341,6 +357,7 @@ class Test(SimplexRegistrar):
 
     def is_simplicial(self) -> (bool, dict):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
+            self.conn.add_to_failed_attempts()
             return False, dict()
 
         while True:
@@ -350,6 +367,7 @@ class Test(SimplexRegistrar):
                 picked_facet, picked_facet_id = self.sample_simplex_greedy(s)
             except WeCanStopSignal:
                 if self._level - 1 == 0:  # the very first level
+                    self.conn.mark_simplicial()
                     return True, self.callback_data[self._level]
                 return True, self.callback_data
             except NoMoreBalls:
@@ -368,6 +386,7 @@ class Test(SimplexRegistrar):
                 if len(self._sorted_s) == 0:
                     self.callback_data[self._level] = self.identifier2facets()
                     if self._level - 1 == 0:  # the very first level
+                        self.conn.mark_simplicial()
                         return True, self.callback_data[self._level]
                     # print(f"(l={self._level}) Sending back {self.callback_data}")
                     return True, self.callback_data
@@ -396,83 +415,3 @@ class Test(SimplexRegistrar):
         for _id in identifier:
             facets += [self.id2name[_id]]
         return facets
-
-    # def new_get_valid_trials(self, size):
-    #     d = Counter()
-    #     for bset in self.blocked_sets:
-    #         d += Counter(bset)
-    #     ns_slots = []
-    #     for bset in self.blocked_sets:
-    #         ns_slots += [set(list(d.keys())).difference(bset)]
-    #     shielding = []
-    #     non_shielding = []
-    #
-    #     if self._level == 1:
-    #         for _ in range(self.n):
-    #             non_shielding += [(_, self._sorted_d[_], self._sorted_d[_] - self.deg_seq[_])]
-    #     else:
-    #         remaining_degs = self.DEGREE_LIST - self.compute_joint_seq_from_identifier(sorted_deg=False)[1]
-    #         for _ in self.level_map[1].keys():
-    #             if self.level_map[self._level - 1][_] is None:
-    #                 continue
-    #             if remaining_degs[self.level_map[self._level - 1][_]] == 0:
-    #                 continue
-    #             if d[self.level_map[self._level - 1][_]] >= 1:
-    #                 shielding += [(self.level_map[self._level - 1][_], self._DEGREE_LIST[_])]
-    #             else:
-    #                 non_shielding += [(self.level_map[self._level - 1][_], self._DEGREE_LIST[_])]
-    #     non_shielding = sorted(non_shielding, key=itemgetter(1), reverse=True)
-    #     shielding = sorted(shielding, key=itemgetter(1), reverse=True)
-    #     non_shielding = list(map(lambda x: x[0], non_shielding))
-    #     shielding = list(map(lambda x: x[0], shielding))
-    #
-    #     hs_list = []
-    #     try:
-    #         with Hitman(bootstrap_with=ns_slots, htype='sorted') as hitman:
-    #             for hs in hitman.enumerate():
-    #                 hs_list += [hs]
-    #     except:
-    #         print(ns_slots)
-    #     hs_list.sort(key=lambda x: np.sum(x))
-    #     hs_list_len = np.array(list(map(lambda x: len(x), hs_list)))
-    #     # print(hs_list)
-    #     # shielding = list(set(list(shielding)).difference(set(flatten(hs_list))))
-    #     pool = shielding + non_shielding
-    #
-    #     if len(hs_list) == 0:
-    #         n_s = len(shielding)
-    #         n_ns = len(non_shielding)
-    #
-    #         for _ in np.arange(1, n_ns + 1, +1):
-    #             if size - _ > n_s or size - _ < 0:
-    #                 continue
-    #             gen_ns = combinations(non_shielding, _)
-    #             gen = combinations(shielding, size - _)
-    #             while True:
-    #                 try:
-    #                     _comb_ns = next(gen_ns)
-    #                 except StopIteration:
-    #                     break
-    #
-    #                 while True:
-    #                     try:
-    #                         _comb = next(gen)
-    #                     except StopIteration:
-    #                         gen = combinations(shielding, size - _)
-    #                         break
-    #                     yield _comb + _comb_ns
-    #     else:
-    #         if np.any(hs_list_len > size):
-    #             pass
-    #         else:
-    #             for hs in hs_list:
-    #                 if size - len(hs) > len(pool):
-    #                     continue
-    #                 gen = combinations(set(list(pool)).difference(set(list(hs))), size - len(hs))
-    #                 while True:
-    #                     try:
-    #                         _comb = next(gen)
-    #                     except StopIteration:
-    #                         break
-    #                     yield list(_comb) + hs
-    #     raise NoMoreBalls("No more usable proposals.")
