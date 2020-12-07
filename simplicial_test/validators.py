@@ -1,7 +1,4 @@
-import numpy as np
-from collections import Counter
-from simplicial_test.utils import NoSlotError, basic_validations_degs_and_sizes, get_shielding_facets_when_vids_filled, \
-    get_nonshielding_vids, remove_ones
+from simplicial_test.utils import *
 
 
 def validate_data(sorted_d, sorted_s):
@@ -12,6 +9,8 @@ def validate_data(sorted_d, sorted_s):
     if len(sorted_d) > 0 and np.max(sorted_d) > m:
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
+        return False
+    if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
     return True
 
@@ -46,7 +45,6 @@ def validate_nonshielding(curent_sizes, non_shielding, shielding):
 def validate_reduced_seq(both, curent_sizes, current_facets) -> (bool, tuple):
     collected_facets = list()
     curent_sizes = np.array(curent_sizes, dtype=np.int_)
-    shielding_facets = []
     exempt_vids = list()
     while Counter(both)[len(curent_sizes)] != 0:
         if len(curent_sizes) > 1:

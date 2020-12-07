@@ -1,7 +1,7 @@
 from simplicial_test.utils import *
 from simplicial_test.sample import get_hitting_sets
 from copy import deepcopy
-from itertools import combinations_with_replacement
+from itertools import combinations_with_replacement, starmap, product
 from collections import defaultdict
 
 
@@ -9,6 +9,10 @@ class EnumRegistrar(object):
     def __init__(self):
         self.pointer = 0
         self.facets_pointer = 0
+        self.facets_count = 0
+        self.facet_count_per_facets = defaultdict(int)
+        self.ns_vtx = 0
+        self.dfs_locator = None
 
         self.facet2id = dict()
         self.id2facet = dict()
@@ -40,16 +44,36 @@ class EnumRegistrar(object):
         return sorted_facets, self.facets2id[sorted_facets]
 
     def register_state(self, facets):
+        """
+        dpv: `degree per vertex`
+        
+        vpf: `vertex id per facet`
+
+        vsc: `vertex symmetry class`
+
+        n: `number of facets`
+
+        Parameters
+        ----------
+        facets
+
+        Returns
+        -------
+
+        """
         facets = self.sort_facets(facets)
         if self.facets2id[facets] not in self.states:
             state = self._compute_state(facets)
-            vtx_symm_class = self.groupby_vtx_symm_class(self.dict2tuple(state[1]))
+            vsc = self.groupby_vtx_symm_class(self.dict2tuple(state[1]))
             self.states[self.facets2id[facets]] = {
-                "n_facets": len(facets),
-                "deg_per_vid": state[0],
-                "vid_per_facet": state[1],
-                "vtx_symm_class": vtx_symm_class
+                "m": len(facets),
+                "dpv": state[0],
+                "vpf": state[1],
+                "vsc": vsc,
+                "loc": (self.facets_count, self.facet_count_per_facets[self.facets_count], self.ns_vtx),
+                "dfs": self.dfs_locator
             }
+            self.facet_count_per_facets[self.facets_count] += 1
 
     @staticmethod
     def groupby_vtx_symm_class(d_input):
@@ -63,20 +87,20 @@ class EnumRegistrar(object):
         sorted_facets = []
         for facet in facets:
             sorted_facets += [tuple(sorted(facet, reverse=False))]
-        return tuple(sorted_facets)
+        return tuple(sorted(sorted_facets, key=lambda _: [-len(_)] + list(_)))
 
     @staticmethod
     def get_created_vids(facets):
         return set(flatten(facets))
 
     def _compute_state(self, facets) -> tuple:
-        deg_per_vid = defaultdict(int)
-        vid_per_facet = defaultdict(list)
+        dpv = defaultdict(int)
+        vpf = defaultdict(list)
         for facet in facets:
             for vid in facet:
-                deg_per_vid[vid] += 1
-                vid_per_facet[vid] += [self.facet2id[tuple(facet)]]
-        return deg_per_vid, vid_per_facet
+                dpv[vid] += 1
+                vpf[vid] += [self.facet2id[tuple(facet)]]
+        return dpv, vpf
 
     @staticmethod
     def dict2tuple(d_input):
@@ -106,6 +130,53 @@ class Enum(EnumRegistrar):
         self.created_vids = set()
         pass
 
+    @staticmethod
+    def get_dfs_navigator(size_seq):
+        m = len(size_seq)
+        dummy1 = np.zeros([m], dtype=np.int_)
+        dummy1[1] = 1
+        dummy2 = [_ + 1 for _ in size_seq]
+        dummy2[0] = 1
+        s_map = starmap(range, zip(dummy1, dummy2))
+        return product(*s_map)
+
+    def compute_dfs(self):
+        nav = self.get_dfs_navigator(self.size_seq)
+        s = self.size_seq.pop(0)
+        facets = []
+        facet = []
+        for _ in range(s):
+            facet += [_]
+
+        self.dfs_locator = tuple([0])
+        self.update_incrementally(facet, facets)
+
+        for _nav in nav:
+            _nav = list(_nav)
+            _nav.pop(0)
+            idx = 0
+            dfs_locator = [0]
+            self.dfs_locator = tuple(dfs_locator)
+            while len(_nav) > 0:
+                ns_vtx = _nav.pop(0)
+                next_size = self.size_seq[idx]
+                self.ns_vtx = ns_vtx
+
+                pool = self.get_facet_ids_per_dfs_locator(self.dfs_locator)
+                dfs_locator += [ns_vtx]
+                self.dfs_locator = tuple(dfs_locator)
+
+                for facets_id in pool:
+                    facets = list(self.id2facets[facets_id])
+                    self.created_vids = self.get_created_vids(facets)
+                    if ns_vtx == 0:
+                        self.fill_wo_creating_new_vertices(next_size, facets)
+                    elif ns_vtx == next_size:
+                        self.fill_with_only_ones(next_size, facets)
+                    else:
+                        self.fill_w_creating_new_vertices(next_size, facets, ns_vtx)
+                idx += 1
+
     def compute(self):
         s = self.size_seq.pop(0)
         facets = []
@@ -114,14 +185,15 @@ class Enum(EnumRegistrar):
             facet += [_]
         self.update_incrementally(facet, facets)
 
-        facets_count = 1
         while len(self.size_seq) > 0:
+            self.facets_count += 1
             next_size = self.size_seq.pop(0)
-            pool = self.get_facet_ids_per_n(facets_count)
+            pool = self.get_facet_ids_per_m(self.facets_count)
 
             for facets_id in pool:
                 facets = list(self.id2facets[facets_id])
                 for ns_vtx in range(0, next_size + 1):
+                    self.ns_vtx = ns_vtx
                     self.created_vids = self.get_created_vids(facets)
                     if ns_vtx == 0:  # must check with hitting set routine
                         self.fill_wo_creating_new_vertices(next_size, facets)
@@ -129,25 +201,42 @@ class Enum(EnumRegistrar):
                         self.fill_with_only_ones(next_size, facets)
                     else:  # freedom in choosing slots in the shielded region, must consider identical vertices
                         self.fill_w_creating_new_vertices(next_size, facets, ns_vtx)
-            facets_count += 1
+
+    @staticmethod
+    def get_hs_identifier(vsc, hs):
+        vsc_inv = {tuple(v): k for k, v in vsc.items()}
+        _id = []
+        for _hs in hs:
+            for k, v in vsc_inv.items():
+                if _hs in k:
+                    _id += [v[0]]
+        return tuple(sorted(_id))
 
     def fill_wo_creating_new_vertices(self, next_size, facets):
         # print(f"Dealing with ns_vtx = {ns_vtx} of {next_size}")
         hs_list = get_hitting_sets(facets, self.created_vids)
-        vsc = self.states[self.facets2id[self.sort_facets(facets)]]["vtx_symm_class"]
+        vsc = self.states[self.facets2id[self.sort_facets(facets)]]["vsc"]
         vsc_deepcopy = deepcopy(vsc)
 
         if len(hs_list) == 0:
             pass
         else:
+            hs_ids = dict()
             for _hs_list in hs_list:
-                if len(_hs_list) <= next_size:
+                try:
+                    hs_ids[self.get_hs_identifier(vsc, _hs_list)]
+                except KeyError:
+                    hs_ids[self.get_hs_identifier(vsc, _hs_list)] = _hs_list
+                else:
+                    if sum(_hs_list) < sum(hs_ids[self.get_hs_identifier(vsc, _hs_list)]):
+                        hs_ids[self.get_hs_identifier(vsc, _hs_list)] = _hs_list
+            for _hs in hs_ids.values():
+                if len(_hs) <= next_size:
                     vsc = deepcopy(vsc_deepcopy)
-                    _next_size = next_size - len(_hs_list)
-                    leftover = list(self.created_vids.difference(set(_hs_list)))
-                    _iter = combinations_with_replacement(vsc.keys(), _next_size)
+                    _next_size = next_size - len(_hs)
+                    _iter = combinations_with_replacement([_ for _ in vsc.keys() if _ not in _hs], _next_size)
                     for _iter_combn in _iter:
-                        facet = deepcopy(_hs_list)
+                        facet = deepcopy(_hs)
                         tracker = defaultdict(int)
                         for symm_class in _iter_combn:
                             try:
@@ -163,11 +252,10 @@ class Enum(EnumRegistrar):
         facet = []
         for _ in range(ns_vtx):
             facet += [_ + len(self.created_vids)]
-
         facet_deepcopy = deepcopy(facet)
 
         _next_size = next_size - ns_vtx
-        vsc = self.states[self.facets2id[self.sort_facets(facets)]]["vtx_symm_class"]
+        vsc = self.states[self.facets2id[self.sort_facets(facets)]]["vsc"]
         vsc_deepcopy = deepcopy(vsc)
 
         _iter = combinations_with_replacement(vsc.keys(), _next_size)
@@ -190,9 +278,26 @@ class Enum(EnumRegistrar):
             facet += [_ + len(self.created_vids)]
         self.update_incrementally(facet, facets)
 
-    def get_facet_ids_per_n(self, n):
+    def get_facet_ids_per_m(self, m):
         pool = []
         for _ in self.states:
-            if self.states[_]["n_facets"] == n:
+            if self.states[_]["m"] == m:
                 pool += [_]
         return pool
+
+    def get_facet_ids_per_dfs_locator(self, dfs):
+        pool = []
+        for _ in self.states:
+            if self.states[_]["dfs"] == dfs:
+                pool += [_]
+        return pool
+
+    def get_placed_order_per_fid(self, _id):
+        flen = len(self.id2facets[_id])
+        codes = []
+        for c in range(flen):
+            fid = tuple(self.id2facets[_id][:c + 1])
+            codes += [self.states[self.facets2id[fid]]["loc"][2]]
+        return codes
+
+

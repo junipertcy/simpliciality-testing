@@ -150,6 +150,8 @@ class Test(SimplexRegistrar):
             except RuntimeError:
                 raise NoMoreBalls(
                     "May not be solvable with the greedy algorithm OR the recursive_is_simplicial must return False.")
+            except NoMoreBalls:
+                raise NoMoreBalls("No more usable proposals.")
             # Note that self.blocked_sets are passed from a higher level,
             # whereas larger_simplices is anew for each level.
             if validators.validate_issubset_blocked_sets(candidate_facet, self.blocked_sets):
@@ -161,6 +163,7 @@ class Test(SimplexRegistrar):
                 picked_facet, picked_facet_id = self.register(candidate_facet)
                 return picked_facet, picked_facet_id
             else:
+                self.num_failures += 1
                 for key in self.level_map.keys():
                     if key >= self._level:
                         self.level_map[key] = {}
@@ -182,18 +185,19 @@ class Test(SimplexRegistrar):
         current_facets = self.identifier2facets(identifier) + [candidate_facet]
         _sizes = self._sorted_s
         if len(_sizes) == 0:
-            return True, "0"
+            return True, "Last facet explored."
         _both = self.get_remaining_slots(identifier, candidate_facet)  # both (non_shielding & shielding)
         if np.min(_both) < 0:
-            return False, "1"
-        #
+            return False, "Invalid facet choice. Negative remaining degrees detected."
+
         if len(_sizes) == 1:
             for facet in current_facets:
                 if set(np.nonzero(_both)[0]).issubset(set(facet)):
-                    return False, "2"
-        #
+                    return False, "Second last facet explored. " \
+                                  "But the very last facet is doomed to fail the no-inclusion constraint."
+
         if np.any(_both > len(_sizes)):
-            return False, "3"
+            return False, "Some degrees require more facets than the actual remaining number."
         if np.sum(_both) > np.count_nonzero(_both) == _sizes[0]:
             return False, "4"
 
@@ -209,7 +213,7 @@ class Test(SimplexRegistrar):
 
         for blocked_set in self.blocked_sets:
             if set(np.nonzero(_both)[0]).issubset(set(blocked_set)):
-                return False, "8"
+                return False, "The remaining facets are doomed to fail the no-inclusion constraint."
 
         if Counter(_both)[len(_sizes)] > 0:
             _ = validators.validate_reduced_seq(_both, _sizes, current_facets)
@@ -220,18 +224,19 @@ class Test(SimplexRegistrar):
                 for facet in current_facets:
                     for collected_facet in self.collected_facets:
                         if set(collected_facet).issubset(set(facet)):
-                            return False, "10"
-                return True, "0"
+                            return False, "Last facet explored after must-do pairing. " \
+                                          "But no-inclusion constraint failed."
+                return True, "Last facet explored after must-do pairing."
         else:
             self.exempt_vids = []
             self.collected_facets = []
         self.mapping2shrinked, self.mapping2enlarged = get_seq2seq_mapping(_both)
         filtered = filter_blocked_facets(current_facets + self.blocked_sets, self.exempt_vids)
         _blocked_sets = shrink_facets(filtered, self.mapping2shrinked)
-        if self.verbose:
-            print(
-                f"(l={self._level}) Selected {candidate_facet} (next validating at l={self._level + 1})"
-            )
+        # if self.verbose:
+        #     print(
+        #         f"(l={self._level}) Selected {candidate_facet} (next validating at l={self._level + 1})"
+        #     )
         try:
             # try:
             #     inv_level_map = {v: k for k, v in self.level_map[self._level - 1].items()}
@@ -243,7 +248,7 @@ class Test(SimplexRegistrar):
             #     print(f"(l={self._level}) okay... we selected {candidate_facet}; bsets={self.blocked_sets}")
             #     pass
             self._compute_level_map()
-            bool_, facets = self._recursive_is_simplicial(
+            deeper_facet_found, facets = self._recursive_is_simplicial(
                 _both, _sizes,
                 blocked_sets=_blocked_sets,
                 level_map=self.level_map,
@@ -252,9 +257,10 @@ class Test(SimplexRegistrar):
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
+
             if int(str(e)) <= 10:
-                self.num_failures += 1
-                if self.num_failures > 5:
+                # print(f"(l={self._level}) num_failures={self.num_failures}")
+                if self.num_failures > 20:
                     self.conn.add_to_failed_attempts()
                     # print(f"(l={self._level}) to many fails; skip this level")
                     raise NoMoreBalls
@@ -267,7 +273,7 @@ class Test(SimplexRegistrar):
                 self.conn.add_to_failed_attempts()
                 # print(f"(l={self._level}) skip this level")
                 raise NoMoreBalls
-        if bool_:
+        if deeper_facet_found:
             facets = [self.exempt_vids + list(s) for s in facets]
             self.current_facets = current_facets
             all_facets = self.current_facets + facets + self.collected_facets
@@ -280,7 +286,7 @@ class Test(SimplexRegistrar):
             # )
             raise WeCanStopSignal
         else:
-            return bool_, "11"
+            return False, "No valid facet found at a higher level."
 
     def _recursive_is_simplicial(self,
                                  degs,
@@ -290,7 +296,6 @@ class Test(SimplexRegistrar):
                                  _dlist=None,
                                  _slist=None,
                                  verbose=False) -> (bool, list):
-
         try:
             st = Test(
                 degs,
@@ -302,10 +307,11 @@ class Test(SimplexRegistrar):
                 _slist=self._SIZE_LIST,
                 verbose=verbose
             )
-            bool_, facets = st.is_simplicial()  # facets: facets from a deeper level
+            # facets: facets from a deeper level
+            deeper_facet_is_simplicial, facets = st.is_simplicial()
         except NoMoreBalls:
             raise NoMoreBalls(self._level)
-        if bool_:
+        if deeper_facet_is_simplicial:
             # transform the facets collected from a deeper level
             return True, get_enlarged_seq(self.mapping2enlarged, facets[self._level + 1])
         else:
@@ -355,10 +361,10 @@ class Test(SimplexRegistrar):
         identifier = self.identifier
         return [index for index, i in enumerate(self.facet_size_per_id) if (index in identifier and i >= size)]
 
-    def is_simplicial(self) -> (bool, dict):
+    def is_simplicial(self):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
             self.conn.add_to_failed_attempts()
-            return False, dict()
+            return False, tuple()
 
         while True:
             s = self._sorted_s[0]
@@ -368,16 +374,18 @@ class Test(SimplexRegistrar):
             except WeCanStopSignal:
                 if self._level - 1 == 0:  # the very first level
                     self.conn.mark_simplicial()
-                    return True, self.callback_data[self._level]
+                    return True, sort_callback(self.callback_data[self._level])
                 return True, self.callback_data
             except NoMoreBalls:
                 raise NoMoreBalls(f"No more usable proposals at level={self._level}; roll back or say no.")
             else:
                 update_deg_seq(self.deg_seq, picked_facet, +1)
                 if validators.validate_interm_degs(self.DEGREE_LIST, self.deg_seq):
+                    # print(f"(l={self._level}) validate_interm_degs check!")
                     self.identifier += [picked_facet_id]
                 else:
                     # Backtrack
+                    # print(f"(l={self._level}) validate_interm_degs failed!")
                     self.log_forbidden(tuple(sorted(list(picked_facet))), "failed validate_interm_degs")
                     update_deg_seq(self.deg_seq, picked_facet, -1)
                     self._sorted_s = np.insert(self._sorted_s, 0, len(self.id2name[picked_facet_id]))
@@ -387,10 +395,10 @@ class Test(SimplexRegistrar):
                     self.callback_data[self._level] = self.identifier2facets()
                     if self._level - 1 == 0:  # the very first level
                         self.conn.mark_simplicial()
-                        return True, self.callback_data[self._level]
+                        return True, sort_callback(self.callback_data[self._level])
                     # print(f"(l={self._level}) Sending back {self.callback_data}")
                     return True, self.callback_data
-        return False, dict()
+        return False, tuple()
 
     def compute_joint_seq_from_identifier(self, identifier=None, sorted_deg=True):
         if identifier is None:

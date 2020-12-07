@@ -259,6 +259,13 @@ def get_enlarged_seq(mapping2enlarged, facets) -> list:
     return reduced_facets
 
 
+def sort_callback(facets):
+    t = []
+    for facet in facets:
+        t += [tuple(sorted(facet, reverse=False))]
+    return tuple(t)
+
+
 def get_seq2seq_mapping(degs):
     old2new = dict()
     for idx, _deg in enumerate(degs):

@@ -50,11 +50,22 @@ def get_hitting_sets(facets, created_vids):
     ns_slots = []
     for facet in facets:
         ns_slots += [list(created_vids.difference(set(facet)))]
-    # print(f"ns_slots = {ns_slots}")
+
     hs_list = []
     with Hitman(bootstrap_with=ns_slots, htype='sorted') as hitman:
-        for hs in hitman.enumerate():
-            hs_list += [hs]
+        try:
+            for hs in hitman.enumerate():
+                hs_list += [hs]
+        except TypeError:
+            # object of type 'NoneType' has no len()
+            # potentially a bug in Hitman; reproducible when
+            # ns_slots = [
+            # [12, 13, 14, 15, 16, 17, 18],
+            # [4, 5, 6, 7, 8, 9, 10, 11, 17, 18],
+            # [2, 3, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16],
+            # [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 18]
+            # ]
+            pass
     return hs_list
 
 
@@ -133,4 +144,3 @@ def relabel(facets):
             _facet += [d[vid]]
         _facets += [_facet]
     return _facets
-
