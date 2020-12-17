@@ -7,6 +7,35 @@ def flatten(nested_list):
     return [item for sublist in nested_list for item in sublist]
 
 
+def compute_dpv(facets, is_sorted=True) -> tuple:
+    dpv = defaultdict(int)
+    for facet in facets:
+        for vid in facet:
+            dpv[vid] += 1
+    if not is_sorted:
+        _dpv = []
+        for _ in range(len(dpv.keys())):
+            _dpv += [dpv[_]]
+        return tuple(_dpv)
+    else:
+        return tuple(sorted(list(dpv.values()), reverse=True))
+
+
+def groupby_vtx_symm_class(d_input):
+    res = {}
+    for i, v in d_input.items():
+        res[v] = [i] if v not in res.keys() else res[v] + [i]
+    return res
+
+
+def get_indices_of_k_in_blocked_sets(blocked_sets, k):
+    indices = []
+    for idx, _ in enumerate(blocked_sets):
+        if k in _:
+            indices += [idx]
+    return indices
+
+
 class NoSlotError(Exception):
     def __init__(self, *args):
         if args:

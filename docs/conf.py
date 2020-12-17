@@ -21,7 +21,7 @@ from recommonmark.parser import CommonMarkParser
 # -- Project information -----------------------------------------------------
 
 project = 'junipertcy/simplicialTest'
-copyright = '2020, Tzu-Chi Yen <tzuchi.yen@colorado.edu>'
+copyright = '2020-2021, Tzu-Chi Yen <tzuchi.yen@colorado.edu>'
 author = 'Tzu-Chi Yen <tzuchi.yen@colorado.edu>'
 
 # The full version, including alpha/beta/rc tags

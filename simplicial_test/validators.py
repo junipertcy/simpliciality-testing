@@ -29,16 +29,17 @@ def validate_nonshielding(curent_sizes, non_shielding, shielding):
     -------
 
     """
-    remaining = len(curent_sizes)
-    if np.sum(non_shielding) < remaining:
-        return True
-    elif np.sum(non_shielding) == remaining:
-        _ = curent_sizes - 1
-        if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
-            return False
-        if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
-            if Counter(non_shielding)[1] == 0:
-                return True
+    if np.min(non_shielding) >= 0:
+        remaining = len(curent_sizes)
+        if np.sum(non_shielding) < remaining:
+            return True
+        elif np.sum(non_shielding) == remaining:
+            _ = curent_sizes - 1
+            if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
+                return False
+            if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
+                if Counter(non_shielding)[1] == 0:
+                    return True
     return False  # safe!
 
 
