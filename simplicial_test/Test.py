@@ -281,7 +281,7 @@ class Test(SimplexRegistrar):
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
-            if int(str(e)) <= 2:
+            if int(str(e)) <= 3:
                 if self.num_failures > 1e2:
                     # self.conn.add_to_failed_attempts()
                     raise NoMoreBalls
