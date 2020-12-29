@@ -2,8 +2,9 @@ from simplicial_test import validators
 from simplicial_test.utils import *
 from operator import itemgetter
 from itertools import combinations
+from simplicial_test.enumeration import sort_facets
 
-from .mongo import DB
+# from .mongo import DB
 
 import sys
 
@@ -41,7 +42,7 @@ class Test(SimplexRegistrar):
         if blocked_sets is None:
             self.blocked_sets = list()
         else:
-            self.blocked_sets = blocked_sets
+            self.blocked_sets = simplify_blocked_sets(blocked_sets)
         self.verbose = verbose
 
         self.collected_facets = list()
@@ -61,9 +62,9 @@ class Test(SimplexRegistrar):
 
         self.total_failures_count = total_failures_count
 
-        self.conn = DB("simplicial", "deadends", self._DEGREE_LIST.tolist(), self._SIZE_LIST.tolist())
-        if level == 0:
-            self.conn.init()
+        # self.conn = DB("simplicial", "deadends", self._DEGREE_LIST.tolist(), self._SIZE_LIST.tolist())
+        # if level == 0:
+        #     self.conn.init()
 
         self._level = level + 1
         self.level_map = level_map
@@ -75,6 +76,7 @@ class Test(SimplexRegistrar):
                 self.level_map[self._level][_] = None
                 self.level_map[0][_] = _
         self.num_failures = 0
+        self.explored = defaultdict(list)
         if verbose:
             print(f"---------- (l={self._level}) ----------\n"
                   f"Size list: {self.SIZE_LIST.tolist()}\n"
@@ -246,9 +248,8 @@ class Test(SimplexRegistrar):
         for blocked_set in self.blocked_sets:
             if set(np.nonzero(_both)[0]).issubset(set(blocked_set)):  # useful
                 return False, "The remaining facets are doomed to fail the no-inclusion constraint."
-
         if Counter(_both)[len(_sizes)] > 0:
-            _ = validators.validate_reduced_seq(_both, _sizes, current_facets)
+            _ = validators.validate_reduced_seq(_both, _sizes, current_facets, self.blocked_sets)
             if _[0]:  # useful
                 return False, "9"
             _both, _sizes, self.collected_facets, self.exempt_vids = _[1]
@@ -269,6 +270,7 @@ class Test(SimplexRegistrar):
 
         try:
             self._compute_level_map()
+
             deeper_facet_found, facets = self._recursive_is_simplicial(
                 _both, _sizes,
                 blocked_sets=_blocked_sets,
@@ -281,14 +283,14 @@ class Test(SimplexRegistrar):
         except NoMoreBalls as e:
             if int(str(e)) <= 2:
                 if self.num_failures > 1e2:
-                    self.conn.add_to_failed_attempts()
+                    # self.conn.add_to_failed_attempts()
                     raise NoMoreBalls
                 # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
-                self.conn.add_to_failed_attempts()
+                # self.conn.add_to_failed_attempts()
                 return False, "keep looking for balls!"
             else:
                 # forget about this level
-                self.conn.add_to_failed_attempts()
+                # self.conn.add_to_failed_attempts()
                 raise NoMoreBalls
         if deeper_facet_found:
             facets = [self.exempt_vids + list(s) for s in facets]
@@ -302,6 +304,17 @@ class Test(SimplexRegistrar):
     def _recursive_is_simplicial(self, degs, sizes, blocked_sets=None, level_map=None, _dlist=None, _slist=None,
                                  total_failures_count=0, verbose=False) -> (bool, list):
         try:
+            blocked_sets = list(sort_facets(blocked_sets))
+            _ = (
+                tuple(sizes),
+                tuple(sorted(degs, reverse=True)),
+                tuple(blocked_sets)
+            )
+            if _ in self.explored[self._level]:
+                raise NoMoreBalls(self._level)
+            else:
+                self.explored[self._level] += [_]
+
             st = Test(degs, sizes, level=self._level, blocked_sets=blocked_sets, level_map=level_map,
                       _dlist=self._DEGREE_LIST, _slist=self._SIZE_LIST, total_failures_count=total_failures_count,
                       verbose=verbose)
@@ -362,7 +375,7 @@ class Test(SimplexRegistrar):
 
     def is_simplicial(self):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
-            self.conn.add_to_failed_attempts()
+            # self.conn.add_to_failed_attempts()
             return False, tuple()
 
         while True:
@@ -372,12 +385,12 @@ class Test(SimplexRegistrar):
                 picked_facet, picked_facet_id = self.sample_simplex_greedy(s)
             except WeCanStopSignal:
                 if self._level - 1 == 0:  # the very first level
-                    self.conn.mark_simplicial()
+                    # self.conn.mark_simplicial()
                     return True, sort_callback(self.callback_data[self._level])
                 return True, self.callback_data
             except NoMoreBalls:
                 if self._level - 1 == 0:  # the very first level
-                    self.conn.add_to_failed_attempts()
+                    # self.conn.add_to_failed_attempts()
                     return False, tuple()
 
                 if self.total_failures_count >= 1e4:
@@ -397,7 +410,7 @@ class Test(SimplexRegistrar):
                 if len(self._sorted_s) == 0:
                     self.callback_data[self._level] = self.identifier2facets()
                     if self._level - 1 == 0:  # the very first level
-                        self.conn.mark_simplicial()
+                        # self.conn.mark_simplicial()
                         return True, sort_callback(self.callback_data[self._level])
                     return True, self.callback_data
         return False, tuple()

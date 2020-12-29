@@ -9,6 +9,7 @@ def sort_facets(facets):
     sorted_facets = []
     for facet in facets:
         sorted_facets += [tuple(sorted(facet, reverse=False))]
+    sorted_facets = set(sorted_facets)
     return tuple(sorted(sorted_facets, key=lambda _: [-len(_)] + list(_)))
 
 

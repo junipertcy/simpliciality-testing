@@ -43,7 +43,7 @@ def validate_nonshielding(curent_sizes, non_shielding, shielding):
     return False  # safe!
 
 
-def validate_reduced_seq(both, curent_sizes, current_facets) -> (bool, tuple):
+def validate_reduced_seq(both, curent_sizes, current_facets, blocked_sets) -> (bool, tuple):
     collected_facets = list()
     curent_sizes = np.array(curent_sizes, dtype=np.int_)
     exempt_vids = list()
@@ -53,9 +53,8 @@ def validate_reduced_seq(both, curent_sizes, current_facets) -> (bool, tuple):
                 return True, tuple()
 
         must_be_filled_vids = np.where(both == len(curent_sizes))[0]
-
         shielding_facets = get_shielding_facets_when_vids_filled(
-            current_facets, must_be_filled_vids, exempt_vids=exempt_vids
+            current_facets, blocked_sets, must_be_filled_vids, exempt_vids=exempt_vids
         )
         nonshielding_vids = get_nonshielding_vids(shielding_facets, both)
         shielding_facets = [set(_).difference(set(must_be_filled_vids)) for _ in shielding_facets]

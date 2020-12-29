@@ -7,6 +7,23 @@ def flatten(nested_list):
     return [item for sublist in nested_list for item in sublist]
 
 
+def simplify_blocked_sets(bsets):
+    data = []
+    for _bsets in bsets[::-1]:
+        if not tuple(_bsets) in data:
+            if len(data) > 0:
+                to_add = True
+                for _ in data:
+                    if set(_bsets).issubset(set(_)):
+                        to_add = False
+                        break
+                if to_add:
+                    data += [_bsets]
+            else:
+                data += [_bsets]
+    return data
+
+
 def compute_dpv(facets, is_sorted=True) -> tuple:
     dpv = defaultdict(int)
     for facet in facets:
@@ -137,7 +154,7 @@ def shrink_degs(degs, inv_map):
     return np.array(d_list, dtype=np.int_)
 
 
-def get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, exempt_vids=list()) -> (bool, set, list):
+def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_filled_vids, exempt_vids=None):
     """
     TODO: this function can be further simplified, along with the function::validate_reduced_seq
     The function works when one have "must_be_filled_vids" -- it goes by searching already existing facets,
@@ -148,16 +165,22 @@ def get_shielding_facets_when_vids_filled(current_facets, must_be_filled_vids, e
     both
     curent_sizes
     current_facets
+    exempt_vids
 
     Returns
     -------
 
     """
-    # print("-> must_be_filled_vids are ", must_be_filled_vids)
+    if exempt_vids is None:
+        exempt_vids = []
     shielding_facets = list()
+    # if a facet contains these must_be_filled_vids (or 'mbfv')
+    mbfv = set(must_be_filled_vids).union(set(exempt_vids))
     for facet in current_facets:  # for all existing facets
-        if set(must_be_filled_vids).issubset(set(facet)) and set(exempt_vids).issubset(
-                set(facet)):  # if a facet contains these must_be_filled_vids
+        if mbfv.issubset(set(facet)):
+            shielding_facets += [facet]
+    for facet in blocked_sets:  # for all existing facets
+        if mbfv.issubset(set(facet)):
             shielding_facets += [facet]
     return shielding_facets  # then we must avoid the slots in these shielding_facets
 
