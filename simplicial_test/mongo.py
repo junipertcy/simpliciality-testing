@@ -5,7 +5,7 @@ import hashlib
 
 
 class DB(object):
-    def __init__(self, db, col, degs, sizes):
+    def __init__(self, db, col, degs, sizes, num_ones):
         config = configparser.ConfigParser()
         config.read('/Users/tzuchi/.config/mongoconfig/master.ini')
         m_config = config['mongo.netscied.tw']
@@ -21,7 +21,8 @@ class DB(object):
         self.n = n
         self.degs = degs
         self.sizes = sizes
-        str2hash = str(degs) + str(sizes)
+        self.num_ones = num_ones
+        str2hash = str(degs) + str(sizes) + str(num_ones)
         _hash = hashlib.sha3_512(str2hash.encode())
         self.hash = _hash.hexdigest()[-8:]
         self.key = {
@@ -30,6 +31,7 @@ class DB(object):
             "n": self.n,
             "degs": self.degs,
             "sizes": self.sizes,
+            "num_ones": self.num_ones,
             "sha3_512_8": self.hash
         }
 
@@ -52,3 +54,6 @@ class DB(object):
             "total": self.total,
             "sha3_512_8": self.hash
         }, {'$set': {'simplicial': True}}, upsert=True)
+
+    def get_failures_count(self):
+        return self.col.find_one({"total": self.total, "sha3_512_8": self.hash})["count"]

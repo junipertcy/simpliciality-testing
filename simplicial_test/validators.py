@@ -12,6 +12,13 @@ def validate_data(sorted_d, sorted_s):
         return False
     if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
+
+    # for ind_d in range(0, len(sorted_d) + 1):
+    #     _ = 0
+    #     for s in range(2 + ind_d, sorted_s[0] + 1):
+    #         _ += Counter(sorted_s)[s]
+    #     if _ < sorted_d[ind_d]:
+    #         return False
     return True
 
 

@@ -2,6 +2,11 @@ import numpy as np
 from collections import defaultdict, Counter
 from copy import deepcopy
 
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 
 def flatten(nested_list):
     return [item for sublist in nested_list for item in sublist]
@@ -238,13 +243,11 @@ def trim_ones(size_list, degree_list) -> (list, list):
     degree_list = list(degree_list)
     _1 = Counter(size_list)[1]
     _2 = Counter(degree_list)[1]
-    if _1 > _2:
-        print("Too many 0-simplices. We cannot satisfy the inclusive constraint.")
-    else:
-        for _ in range(_1):
-            size_list.remove(1)
-            degree_list.remove(1)
-    return size_list, degree_list
+    _ = min(_1, _2)
+    for __ in range(_):
+        size_list.remove(1)
+        degree_list.remove(1)
+    return size_list, degree_list, _
 
 
 def get_slimmest_d(s):
@@ -315,7 +318,7 @@ def sort_callback(facets):
     t = []
     for facet in facets:
         t += [tuple(sorted(facet, reverse=False))]
-    return tuple(t)
+    return t
 
 
 def get_seq2seq_mapping(degs):
@@ -412,6 +415,40 @@ def accel_asc(n):
         a[k] = x + y
         y = x + y - 1
         yield a[:k + 1]
+
+
+def paint_landscape(mat, max_sizes_ind, max_degs_ind, output=None, dpi=200, ):
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # setup the plot
+
+    colors_undersea = plt.cm.tab20c(np.linspace(0, 0.1999, 256))
+    colors_land = plt.cm.Wistia(np.linspace(0., 1., 256))
+    all_colors = np.vstack((colors_undersea, colors_land))
+    cmap = mpl.colors.LinearSegmentedColormap.from_list('noname', all_colors)
+
+    divnorm = colors.TwoSlopeNorm(vmin=min(mat.flatten()) - 0.5, vcenter=0, vmax=max(mat.flatten()) + 0.5)
+
+    ims = ax.imshow(mat, norm=divnorm, cmap=cmap, origin='lower', extent=[1, max_sizes_ind, 1, max_degs_ind],
+                    rasterized=True)
+    plt.xlabel("Size sequence")
+    plt.ylabel("Degree sequence")
+
+    # scaled colorbar that aligns with the frame
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    fig.colorbar(ims, cax=cax, label="Failed attempts", shrink=0.6)
+    ax.tick_params(axis="y", direction="in")
+    ax.tick_params(axis="x", direction="in")
+    ax.xaxis.set_ticks_position("bottom")
+
+    ax.spines['right'].set_visible(True)
+    ax.spines['top'].set_visible(True)
+
+    ax.set_xticks(np.arange(1.5, max_sizes_ind + 1, 5))
+    ax.set_yticks(np.arange(1.5, max_degs_ind + 1, 5))
+    ax.set_xticklabels(np.arange(0, max_sizes_ind + 1, 5))
+    ax.set_yticklabels(np.arange(0, max_degs_ind + 1, 5))
+    if output is not None:
+        plt.savefig(output, dpi=dpi, transparent=True)
 
 
 # DEPRECATED, possible use methods included

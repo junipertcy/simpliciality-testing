@@ -4,7 +4,7 @@ from operator import itemgetter
 from itertools import combinations
 from simplicial_test.enumeration import sort_facets
 
-# from .mongo import DB
+from .mongo import DB
 
 import sys
 
@@ -21,11 +21,21 @@ class Test(SimplexRegistrar):
     size_list : ``iterable`` or :class:`numpy.ndarray`, required
 
     """
-
     def __init__(self, degree_list, size_list, level=0, blocked_sets=None, _dlist=None, _slist=None, level_map=None,
-                 total_failures_count=0, verbose=False):
+                 depth=3, width=1e2, trim_ones_first=True, verbose=False):
+
         super().__init__()
+        self.facets_to_append = []
+        num_ones = 0
+        if level == 0:
+            if trim_ones_first:
+                size_list, degree_list, num_ones = trim_ones(size_list, degree_list)
+                for _ in range(num_ones):
+                    self.facets_to_append += [(len(degree_list) + _, )]
+
         self.logbook = defaultdict(dict)
+        self.depth = depth
+        self.width = width
 
         self.m = len(size_list)
         self.n = len(degree_list)
@@ -60,11 +70,9 @@ class Test(SimplexRegistrar):
         if self._SIZE_LIST is None:
             self._SIZE_LIST = self.SIZE_LIST
 
-        self.total_failures_count = total_failures_count
-
-        # self.conn = DB("simplicial", "deadends", self._DEGREE_LIST.tolist(), self._SIZE_LIST.tolist())
-        # if level == 0:
-        #     self.conn.init()
+        self.conn = DB("simplicial", "deadends", self._DEGREE_LIST.tolist(), self._SIZE_LIST.tolist(), num_ones)
+        if level == 0:
+            self.conn.init()
 
         self._level = level + 1
         self.level_map = level_map
@@ -199,6 +207,7 @@ class Test(SimplexRegistrar):
                 return picked_facet, picked_facet_id
             else:
                 self.num_failures += 1
+                self.conn.add_to_failed_attempts()
                 for key in self.level_map.keys():
                     if key >= self._level:
                         self.level_map[key] = {}
@@ -270,27 +279,23 @@ class Test(SimplexRegistrar):
 
         try:
             self._compute_level_map()
-
             deeper_facet_found, facets = self._recursive_is_simplicial(
                 _both, _sizes,
                 blocked_sets=_blocked_sets,
                 level_map=self.level_map,
                 _dlist=self._DEGREE_LIST,
                 _slist=self._SIZE_LIST,
-                total_failures_count=self.total_failures_count,
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
-            if int(str(e)) <= 3:
-                if self.num_failures > 1e2:
-                    # self.conn.add_to_failed_attempts()
+            self.conn.add_to_failed_attempts()
+            if int(eval(str(e))) <= self.depth:
+                if self.num_failures > self.width:
                     raise NoMoreBalls
                 # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
-                # self.conn.add_to_failed_attempts()
                 return False, "keep looking for balls!"
             else:
                 # forget about this level
-                # self.conn.add_to_failed_attempts()
                 raise NoMoreBalls
         if deeper_facet_found:
             facets = [self.exempt_vids + list(s) for s in facets]
@@ -302,7 +307,7 @@ class Test(SimplexRegistrar):
             return False, "No valid facet found at a higher level."
 
     def _recursive_is_simplicial(self, degs, sizes, blocked_sets=None, level_map=None, _dlist=None, _slist=None,
-                                 total_failures_count=0, verbose=False) -> (bool, list):
+                                 verbose=False) -> (bool, list):
         try:
             blocked_sets = list(sort_facets(blocked_sets))
             _ = (
@@ -316,7 +321,7 @@ class Test(SimplexRegistrar):
                 self.explored[self._level] += [_]
 
             st = Test(degs, sizes, level=self._level, blocked_sets=blocked_sets, level_map=level_map,
-                      _dlist=self._DEGREE_LIST, _slist=self._SIZE_LIST, total_failures_count=total_failures_count,
+                      _dlist=self._DEGREE_LIST, _slist=self._SIZE_LIST,
                       verbose=verbose)
             # facets: facets from a deeper level
             deeper_facet_is_simplicial, facets = st.is_simplicial()
@@ -375,7 +380,7 @@ class Test(SimplexRegistrar):
 
     def is_simplicial(self):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
-            # self.conn.add_to_failed_attempts()
+            self.conn.add_to_failed_attempts()
             return False, tuple()
 
         while True:
@@ -385,15 +390,12 @@ class Test(SimplexRegistrar):
                 picked_facet, picked_facet_id = self.sample_simplex_greedy(s)
             except WeCanStopSignal:
                 if self._level - 1 == 0:  # the very first level
-                    # self.conn.mark_simplicial()
-                    return True, sort_callback(self.callback_data[self._level])
+                    self.conn.mark_simplicial()
+                    return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
                 return True, self.callback_data
             except NoMoreBalls:
-                if self._level - 1 == 0:  # the very first level
-                    # self.conn.add_to_failed_attempts()
-                    return False, tuple()
-
-                if self.total_failures_count >= 1e4:
+                self.conn.add_to_failed_attempts()
+                if self._level - 1 == 0:
                     return False, tuple()
                 raise NoMoreBalls(f"No more usable proposals at level={self._level}; roll back or say no.")
             else:
@@ -410,10 +412,9 @@ class Test(SimplexRegistrar):
                 if len(self._sorted_s) == 0:
                     self.callback_data[self._level] = self.identifier2facets()
                     if self._level - 1 == 0:  # the very first level
-                        # self.conn.mark_simplicial()
-                        return True, sort_callback(self.callback_data[self._level])
+                        self.conn.mark_simplicial()
+                        return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
                     return True, self.callback_data
-        return False, tuple()
 
     def compute_joint_seq_from_identifier(self, identifier=None, sorted_deg=True):
         if identifier is None:

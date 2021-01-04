@@ -64,6 +64,7 @@ __all__ = [
     "gen_joint_sequence_from_sizes",
     "accel_asc",
     "NoMoreBalls",
+    "paint_landscape",
     "__author__",
     "__URL__",
     "__version__",

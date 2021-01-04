@@ -4,7 +4,7 @@ from simplicial_test.utils import *
 try:
     from pysat.examples.hitman import Hitman
 except ModuleNotFoundError:
-    # windows will fail
+    # Windows(TM) will fail
     pass
 
 
