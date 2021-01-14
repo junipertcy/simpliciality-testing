@@ -417,8 +417,25 @@ def accel_asc(n):
         yield a[:k + 1]
 
 
-def paint_landscape(mat, max_sizes_ind, max_degs_ind, output=None, dpi=200, ):
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6))  # setup the plot
+def paint_block(facets, output=None, dpi=300, ):
+    g = np.zeros([len(facets), max(flatten(facets)) - min(flatten(facets)) + 1])
+    for idx, facet in enumerate(facets):
+        for vid in facet:
+            g[idx][vid] = 1
+
+    plt.figure(figsize=(16, 12), dpi=300)
+
+    plt.imshow(g, cmap='Greys', interpolation='nearest')
+    plt.xlabel("Vertex index")
+    plt.ylabel("Facet index")
+
+    if output is not None:
+        plt.savefig(output, dpi=dpi, transparent=True)
+
+
+def paint_landscape(mat, output=None, dpi=300, ):
+    max_sizes_ind = max_degs_ind = int(mat.size ** 0.5)
+    fig, ax = plt.subplots(1, 1, figsize=(12, 12))  # setup the plot
 
     colors_undersea = plt.cm.tab20c(np.linspace(0, 0.1999, 256))
     colors_land = plt.cm.Wistia(np.linspace(0., 1., 256))
@@ -436,17 +453,17 @@ def paint_landscape(mat, max_sizes_ind, max_degs_ind, output=None, dpi=200, ):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     fig.colorbar(ims, cax=cax, label="Failed attempts", shrink=0.6)
-    ax.tick_params(axis="y", direction="in")
-    ax.tick_params(axis="x", direction="in")
+    ax.tick_params(axis="y", direction="in", length=8)
+    ax.tick_params(axis="x", direction="in", length=8)
     ax.xaxis.set_ticks_position("bottom")
 
     ax.spines['right'].set_visible(True)
     ax.spines['top'].set_visible(True)
 
-    ax.set_xticks(np.arange(1.5, max_sizes_ind + 1, 5))
-    ax.set_yticks(np.arange(1.5, max_degs_ind + 1, 5))
-    ax.set_xticklabels(np.arange(0, max_sizes_ind + 1, 5))
-    ax.set_yticklabels(np.arange(0, max_degs_ind + 1, 5))
+    # ax.set_xticks(np.arange(1.5, max_sizes_ind + 1, 5))
+    # ax.set_yticks(np.arange(1.5, max_degs_ind + 1, 5))
+    # ax.set_xticklabels(np.arange(0, max_sizes_ind + 1, 5))
+    # ax.set_yticklabels(np.arange(0, max_degs_ind + 1, 5))
     if output is not None:
         plt.savefig(output, dpi=dpi, transparent=True)
 

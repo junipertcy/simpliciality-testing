@@ -4,8 +4,7 @@ from simplicial_test.utils import *
 def validate_data(sorted_d, sorted_s):
     # n = len(sorted_d)
     m = len(sorted_s)
-    if len(sorted_d) == 0 or len(sorted_s) == 0:
-        return False
+
     if len(sorted_d) > 0 and np.max(sorted_d) > m:
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):

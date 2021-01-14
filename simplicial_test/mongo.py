@@ -16,13 +16,13 @@ class DB(object):
         total = int(sum(degs))
         m = len(sizes)
         n = len(degs)
-        self.total = total
+        self.total = total + num_ones
         self.m = m
         self.n = n
         self.degs = degs
         self.sizes = sizes
         self.num_ones = num_ones
-        str2hash = str(degs) + str(sizes) + str(num_ones)
+        str2hash = str(degs) + str(sizes) + "," + str(num_ones)
         _hash = hashlib.sha3_512(str2hash.encode())
         self.hash = _hash.hexdigest()[-8:]
         self.key = {
@@ -47,13 +47,18 @@ class DB(object):
         self.col.find_one_and_update({
             "total": self.total,
             "sha3_512_8": self.hash
-        }, {'$inc': {'count': 1}, '$set': {'simplicial': False}}, upsert=True)
+        }, {'$inc': {'count': 1}, '$set': {'simplicial': False}}, upsert=False)
 
     def mark_simplicial(self):
         self.col.find_one_and_update({
             "total": self.total,
             "sha3_512_8": self.hash
-        }, {'$set': {'simplicial': True}}, upsert=True)
+        }, {'$set': {'simplicial': True}}, upsert=False)
 
     def get_failures_count(self):
         return self.col.find_one({"total": self.total, "sha3_512_8": self.hash})["count"]
+
+    def count_documents(self):
+        return self.col.count_documents({
+            "total": self.total
+        })
