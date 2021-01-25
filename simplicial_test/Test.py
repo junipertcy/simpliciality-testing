@@ -1,6 +1,5 @@
 from simplicial_test import validators
 from simplicial_test.utils import *
-from operator import itemgetter
 from itertools import combinations
 from simplicial_test.enumeration import sort_facets
 
@@ -21,8 +20,9 @@ class Test(SimplexRegistrar):
     size_list : ``iterable`` or :class:`numpy.ndarray`, required
 
     """
+
     def __init__(self, degree_list, size_list, level=0, blocked_sets=None, _dlist=None, _slist=None, level_map=None,
-                 depth=3, width=1e2, trim_ones_first=True, conn=None, verbose=False):
+                 depth=1e2, width=1e2, trim_ones_first=True, conn=None, verbose=False):
 
         super().__init__()
         self.facets_to_append = []
@@ -31,7 +31,7 @@ class Test(SimplexRegistrar):
             if trim_ones_first:
                 size_list, degree_list, num_ones = trim_ones(size_list, degree_list)
                 for _ in range(num_ones):
-                    self.facets_to_append += [(len(degree_list) + _, )]
+                    self.facets_to_append += [(len(degree_list) + _,)]
 
         self.logbook = defaultdict(dict)
         self.depth = depth
@@ -90,29 +90,17 @@ class Test(SimplexRegistrar):
                   # f"len::blocked_sets = {list(map(lambda x: len(x), self.blocked_sets))}\n"
                   )
 
-    def get_distinct_selection_deprecated(self, size):
-        pool = []
-        if self._level == 1:
-            for _ in range(self.n):
-                pool += [(_, self._sorted_d[_])]
-        else:
-            remaining_degs = self.DEGREE_LIST - self.compute_joint_seq_from_identifier(sorted_deg=False)[1]
-            level_map = self.level_map[self._level - 1]
-            for _ in self.level_map[1].keys():
-                vtx_current_view = level_map[_]
-                if vtx_current_view is None or remaining_degs[vtx_current_view] == 0:
-                    continue
-                pool += [(vtx_current_view, self._DEGREE_LIST[_])]
-        pool = sorted(pool, key=lambda l: l[1], reverse=True)
-        pool = list(map(lambda x: x[0], pool))
-        gen_pool = combinations(pool, size)
-        while True:
-            yield next(gen_pool)
+    def identifier2facets(self):
+        facets = []
+        for _id in self.identifier:
+            facets += [self.id2name[_id]]
+        return facets
 
     def get_distinct_selection(self, size):
         vsc = defaultdict(list)
         blocked_sets = deepcopy(self.blocked_sets) + self.identifier2facets()
-        remaining_degs = self.DEGREE_LIST - self.compute_joint_seq_from_identifier(sorted_deg=False)[1]
+        facets = self.identifier2facets()
+        remaining_degs = self.DEGREE_LIST - compute_dpv(facets, n=self.n, is_sorted=False)
         level_map = self.level_map[self._level - 1]
         for idx, _ in enumerate(self._DEGREE_LIST):
             if level_map[idx] is not None and remaining_degs[level_map[idx]] != 0:
@@ -132,7 +120,7 @@ class Test(SimplexRegistrar):
         valid_trials = self.get_distinct_selection(size)
         while True:
             try:
-                candidate_facet = next(valid_trials)
+                facet = next(valid_trials)  # candidate_facet
             except RuntimeError:
                 raise NoMoreBalls(
                     "May not be solvable with the greedy algorithm OR the recursive_is_simplicial must return False.")
@@ -140,20 +128,13 @@ class Test(SimplexRegistrar):
                 raise NoMoreBalls("No more usable proposals.")
             # Note that self.blocked_sets are passed from a higher level,
             # whereas larger_simplices is anew for each level.
-            if validators.validate_issubset_blocked_sets(candidate_facet, self.blocked_sets):
+            if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
-            if tuple(sorted(list(candidate_facet))) in self.logbook:
+            if tuple(sorted(list(facet))) in self.logbook:
                 continue
-
-            sizes = self._sorted_s
-            blocked_sets = self.blocked_sets
-            facets = self.identifier2facets()
-            both = self.get_remaining_slots(candidate_facet)  # both (non_shielding & shielding)
-            non_shielding = self.get_remaining_slots(candidate_facet, only_non_shielding=True)
-            ind, reason = self.validate(sizes, both, non_shielding, facets, candidate_facet, blocked_sets)
-
+            ind, reason = self.validate(facet)
             if ind:
-                picked_facet, picked_facet_id = self.register(candidate_facet)
+                picked_facet, picked_facet_id = self.register(facet)
                 return picked_facet, picked_facet_id
             else:
                 self.num_failures += 1
@@ -162,7 +143,7 @@ class Test(SimplexRegistrar):
                     if key >= self._level:
                         self.level_map[key] = {}
 
-    def validate(self, sizes, both, non_shielding, facets, facet, blocked_sets) -> (bool, str):
+    def validate(self, facet) -> (bool, str):
         """
         This function must return True in order for the candidate facet to be considered.
         In other words, if any condition appears to be True, we will not accept the candidate facet.
@@ -176,44 +157,32 @@ class Test(SimplexRegistrar):
         -------
 
         """
-        current_facets = facets + [facet]
-        if len(sizes) == 0:
-            return True, "Last facet explored."
-        if len(sizes) == 1:
-            for _ in current_facets:
-                if set(np.nonzero(both)[0]).issubset(set(_)):
-                    return False, "Second last facet explored. " \
-                                  "But the very last facet is doomed to fail the no-inclusion constraint."
-        if np.any(both > len(sizes)):  # useful
-            return False, "Some degrees require more facets than the actual remaining number."
-        if np.sum(both) > np.count_nonzero(both) == sizes[0]:  # useful
-            return False, "4"
-        if np.count_nonzero(both) < sizes[0]:  # useful
-            return False, "7"
-        _shielding = both - non_shielding  # only shielding
-        if validators.validate_nonshielding(sizes, non_shielding, _shielding):  # useful
-            return False, "6"
+        token = validators.simple_validate(self._sorted_d, self._sorted_s, self.identifier2facets(), facet)
+        if type(token[0]) == bool:
+            return token
+        else:
+            wanting_degs, sizes, current_facets = token
+
+        blocked_sets = self.blocked_sets
         for blocked_set in blocked_sets:
-            if set(np.nonzero(both)[0]).issubset(set(blocked_set)):  # useful
+            if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):  # useful
                 return False, "The remaining facets are doomed to fail the no-inclusion constraint."
-        if Counter(both)[len(sizes)] > 0:
-            _ = validators.validate_reduced_seq(both, sizes, current_facets, blocked_sets)
+        if Counter(wanting_degs)[len(sizes)] > 0:
+            _ = validators.validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets)
             if _[0]:  # useful
                 return False, "9"
-            both, sizes, collected_facets, exempt_vids = _[1]
-            if np.sum(both) == np.sum(sizes) == 0:
+            wanting_degs, sizes, collected_facets, exempt_vids = _[1]
+            if np.sum(wanting_degs) == np.sum(sizes) == 0:
                 return True, "Last facet explored after must-do pairing."
         else:
             exempt_vids = []
             collected_facets = []
         filtered = filter_blocked_facets(current_facets + blocked_sets, exempt_vids)
-        mapping2shrinked, mapping2enlarged = get_seq2seq_mapping(both)
+        mapping2shrinked, mapping2enlarged = get_seq2seq_mapping(wanting_degs)
         blocked_sets = shrink_facets(filtered, mapping2shrinked)
-
         try:
-            self._compute_level_map(mapping2shrinked)
             deeper_facet_found, facets = self._recursive_is_simplicial(
-                both, sizes, mapping2enlarged,
+                wanting_degs, sizes, mapping2shrinked, mapping2enlarged,
                 blocked_sets=blocked_sets,
                 level_map=self.level_map,
                 _dlist=self._DEGREE_LIST,
@@ -238,9 +207,10 @@ class Test(SimplexRegistrar):
         else:
             return False, "No valid facet found at a higher level."
 
-    def _recursive_is_simplicial(self, degs, sizes, mapping2enlarged,
+    def _recursive_is_simplicial(self, degs, sizes, mapping2shrinked, mapping2enlarged,
                                  blocked_sets=None, level_map=None, _dlist=None, _slist=None, verbose=False
                                  ) -> (bool, list):
+        self._compute_level_map(mapping2shrinked)
         try:
             blocked_sets = list(sort_facets(blocked_sets))
             _ = (
@@ -287,31 +257,6 @@ class Test(SimplexRegistrar):
                 except KeyError:
                     self.level_map[1][_] = None
 
-    def get_remaining_slots(self, facet, only_non_shielding=False):
-        """
-        Used in the greedy case only.
-
-        Parameters
-        ----------
-        identifier: current identifier (not including the candidate facet)
-        facet: candidate facet
-        only_non_shielding:
-
-        Returns
-        -------
-
-        """
-        identifier = self.identifier
-        remaining = self._sorted_d - self.compute_joint_seq_from_identifier(identifier, sorted_deg=False)[1]
-        if only_non_shielding:
-            return np.array([0 if _ in set(facet) else remaining[_] for _ in range(self.n)])
-        else:
-            return np.array([remaining[_] - 1 if _ in set(facet) else remaining[_] for _ in range(self.n)])
-
-    def get_selected_facet_ids(self, size) -> list:
-        identifier = self.identifier
-        return [index for index, i in enumerate(self.facet_size_per_id) if (index in identifier and i >= size)]
-
     def is_simplicial(self):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
             self.conn.add_to_failed_attempts()
@@ -354,23 +299,3 @@ class Test(SimplexRegistrar):
                         return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
                     return True, self.callback_data
 
-    def compute_joint_seq_from_identifier(self, identifier=None, sorted_deg=True):
-        if identifier is None:
-            identifier = self.identifier
-        degs = np.zeros(self.n, dtype=np.int_)
-        sizes = []
-
-        for _id in identifier:
-            sizes += [len(self.id2name[_id])]
-            for vertex_id in self.id2name[_id]:
-                degs[vertex_id] += 1
-        if sorted_deg:
-            return sorted(sizes, reverse=True), sorted(degs, reverse=True)
-        else:
-            return sorted(sizes, reverse=True), degs
-
-    def identifier2facets(self):
-        facets = []
-        for _id in self.identifier:
-            facets += [self.id2name[_id]]
-        return facets

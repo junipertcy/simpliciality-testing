@@ -29,18 +29,43 @@ def simplify_blocked_sets(bsets):
     return data
 
 
-def compute_dpv(facets, is_sorted=True) -> tuple:
-    dpv = defaultdict(int)
+def compute_dpv(facets, n=None, is_sorted=True):
+    if n is None:
+        dpv = defaultdict(int)
+    else:
+        dpv = np.zeros([n], dtype=np.int_)
+
     for facet in facets:
         for vid in facet:
             dpv[vid] += 1
-    if not is_sorted:
+    if n is not None:
+        return dpv
+
+    if is_sorted:
+        return tuple(sorted(list(dpv.values()), reverse=True))
+    else:
         _dpv = []
         for _ in range(len(dpv.keys())):
             _dpv += [dpv[_]]
         return tuple(_dpv)
-    else:
-        return tuple(sorted(list(dpv.values()), reverse=True))
+
+
+def get_remaining_slots(degs, facets, facet):
+    """
+    Used in the greedy case only.
+
+    Parameters
+    ----------
+    facet: candidate facet
+
+    Returns
+    -------
+
+    """
+    n = len(degs)
+    remaining = degs - compute_dpv(facets, n=n, is_sorted=False)
+    return np.array([remaining[_] - 1 if _ in set(facet) else remaining[_] for _ in range(n)]), \
+           np.array([0 if _ in set(facet) else remaining[_] for _ in range(n)])  # non_shielding
 
 
 def groupby_vtx_symm_class(d_input):
@@ -167,7 +192,7 @@ def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_
 
     Parameters
     ----------
-    both
+    wanting_degs
     curent_sizes
     current_facets
     exempt_vids
@@ -190,9 +215,9 @@ def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_
     return shielding_facets  # then we must avoid the slots in these shielding_facets
 
 
-def get_nonshielding_vids(shielding_facets, both):
+def get_nonshielding_vids(shielding_facets, wanting_degs):
     nonshielding_vids = set()
-    n = len(both)
+    n = len(wanting_degs)
     # print("-> shielding_facets = ", shielding_facets)
     for facet in shielding_facets:
         non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
@@ -201,9 +226,9 @@ def get_nonshielding_vids(shielding_facets, both):
         else:
             nonshielding_vids.intersection_update(non_shielding_part)
         # remaining number of facets must be able to "hide" in those non_shielding slots, at least
-        # if remaining > np.sum(both[np.array(list(nonshielding_vids), dtype=np.int_)]):
+        # if remaining > np.sum(wanting_degs[np.array(list(nonshielding_vids), dtype=np.int_)]):
         #     print(f"While checking if the remaining number of facets being able to hide in the nonshielding slots, ")
-        #     print(f"We found that remaining={remaining} but nonshielding_vids={nonshielding_vids} (i.e., available sites to hide = {np.sum(both[np.array(list(nonshielding_vids), dtype=np.int_)])})")
+        #     print(f"We found that remaining={remaining} but nonshielding_vids={nonshielding_vids} (i.e., available sites to hide = {np.sum(wanting_degs[np.array(list(nonshielding_vids), dtype=np.int_)])})")
         #     print("Therefore, we reject that the nodes being filled this way.")
         #     raise NoSlotError("The custom error in get_nshielding.")
     return nonshielding_vids
@@ -217,25 +242,25 @@ def basic_validations_degs_and_sizes(degs, sizes):
     return True
 
 
-def remove_ones(s, both, choose_from=set()):
-    # orig_both = deepcopy(both)
-    # _both = deepcopy(both)
-    # both = [_ for _ in both]
+def remove_ones(s, wanting_degs, choose_from=set()):
+    # orig_both = deepcopy(wanting_degs)
+    # _both = deepcopy(wanting_degs)
+    # wanting_degs = [_ for _ in wanting_degs]
     # for _ in range(Counter(s)[1]):
-    #     both.remove(1)
-    # both = np.array(both)
-    # print(type(choose_from), f"np.where(both == 1)[0] = {np.where(both == 1)[0]}")
+    #     wanting_degs.remove(1)
+    # wanting_degs = np.array(wanting_degs)
+    # print(type(choose_from), f"np.where(wanting_degs == 1)[0] = {np.where(wanting_degs == 1)[0]}")
     if len(choose_from) == 0:
         raise NoSlotError
-    all_one_sites = np.where(both == 1)[0]
+    all_one_sites = np.where(wanting_degs == 1)[0]
     if choose_from is not None and type(choose_from) is set:
         choose_from.intersection_update(set(all_one_sites))
         if not choose_from:
             raise NoSlotError
     # print(f"choose_from is {choose_from}")
     removed_sites = np.array(list(choose_from))[:Counter(s)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
-    both[removed_sites] = 0
-    return both, removed_sites.tolist()
+    wanting_degs[removed_sites] = 0
+    return wanting_degs, removed_sites.tolist()
 
 
 def trim_ones(size_list, degree_list) -> (list, list):
@@ -466,6 +491,17 @@ def paint_landscape(mat, output=None, dpi=300, ):
     # ax.set_yticklabels(np.arange(0, max_degs_ind + 1, 5))
     if output is not None:
         plt.savefig(output, dpi=dpi, transparent=True)
+
+
+def get_partition(n=1):
+    gen = accel_asc(n)
+    partitions = []
+    while True:
+        try:
+            partitions += [sorted(next(gen), reverse=True)]
+        except StopIteration:
+            break
+    return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)
 
 
 # DEPRECATED, possible use methods included

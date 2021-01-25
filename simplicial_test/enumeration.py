@@ -1,4 +1,5 @@
 from simplicial_test.utils import *
+from simplicial_test import validators
 from simplicial_test.sample import get_hitting_sets
 from copy import deepcopy
 from itertools import combinations_with_replacement, starmap, product
@@ -43,6 +44,7 @@ class EnumRegistrar(object):
         self.facet_count_per_facets = defaultdict(int)
         self.ns_vtx = 0
         self.dfs_locator = None
+        self.deg_seq = self.size_seq = None
 
         self.facet2id = dict()
         self.id2facet = dict()
@@ -73,15 +75,14 @@ class EnumRegistrar(object):
         return facet, self.facet2id[facet]
 
     def register_facets(self, facets):
-        sorted_facets = get_relabeled_facets(facets)
-        if sorted_facets not in self.facets2id:
-            self.facets2id[sorted_facets] = self.facets_pointer
-            self.id2facets[self.facets_pointer] = sorted_facets
+        if facets not in self.facets2id:
+            self.facets2id[facets] = self.facets_pointer
+            self.id2facets[self.facets_pointer] = facets
             self.facets_pointer += 1
             # print(f"registering {sorted_facets} with id={self.facets_pointer - 1}")
-        return sorted_facets, self.facets2id[sorted_facets]
+        return facets, self.facets2id[facets]
 
-    def register_state(self, facets):
+    def register_state(self, facets, previous):
         """
         dpv: `degree per vertex`
         
@@ -99,10 +100,8 @@ class EnumRegistrar(object):
         -------
 
         """
-
-        facets = get_relabeled_facets(facets)
         fid = self.facets2id[facets]
-        dpv = compute_dpv(facets)
+        dpv = compute_dpv(facets, is_sorted=True)
 
         # for plot use
         if dpv not in self.dpv2id:
@@ -121,7 +120,8 @@ class EnumRegistrar(object):
                 "vpf": vpf,
                 "vsc": vsc,
                 "loc": (len(facets), self.facet_count_per_facets[len(facets)], self.ns_vtx),
-                "dfs": tuple(self.dfs_locator)
+                "dfs": tuple(self.dfs_locator),
+                "p": previous
             }
             self.dpv_m[len(facets)].add(dpv)
             self.dpv2fids[dpv].add(fid)
@@ -153,19 +153,36 @@ class EnumRegistrar(object):
         }
 
     def update_incrementally(self, facet, facets):
-        print(f"facets={facets}; facet={facet}.")
+        if self.deg_seq is not None:
+            if max(facet) >= len(self.deg_seq):
+                return
+            if len(facets) > 0 and max(flatten(facets)) >= len(self.deg_seq):
+                return
+            self.size_seq = np.array(self.size_seq, dtype=np.int_)
+            token = validators.simple_validate(
+                self.deg_seq, self.size_seq[len(facets):], facets, facet, enumeration=True
+            )
+            if token[0] is False:
+                return
+
         if len(facets) == 0:
-            self.register_facet(facet)
             _facets = [tuple(facet)]
+            previous = None
         else:
-            _facets = list(deepcopy(facets))
+            _facets = deepcopy(facets)
+            previous = self.facets2id[tuple(_facets)]
             _facets += [tuple(facet)]
 
-            relabeled_facets = get_relabeled_facets(_facets)
-            for facet in relabeled_facets:
-                self.register_facet(facet)
-        self.register_facets(_facets)
-        self.register_state(_facets)
+        relabeled_facets = get_relabeled_facets(_facets)
+        for facet in relabeled_facets:
+            self.register_facet(facet)
+        self.register_facets(relabeled_facets)
+        self.register_state(relabeled_facets, previous)
+
+        dpv = compute_dpv(relabeled_facets, is_sorted=True)
+        if self.deg_seq is not None and dpv == tuple(self.deg_seq):
+            print(f"WeCanStopSignal:{dpv} == {self.deg_seq}")
+            raise WeCanStopSignal
 
 
 class Enum(EnumRegistrar):
@@ -232,7 +249,7 @@ class Enum(EnumRegistrar):
         vsc_deepcopy = deepcopy(vsc)
 
         if len(hs_list) == 0:
-            pass
+            return
         else:
             hs_ids = dict()
             for _hs_list in hs_list:
@@ -316,41 +333,51 @@ class Enum(EnumRegistrar):
         return pool
 
     def compute_dfs(self):
-        nav = self.get_dfs_navigator(self.size_seq)
-        s = self.size_seq.pop(0)
-        facets = []
-        facet = []
-        for _ in range(s):
-            facet += [_]
+        try:
+            nav = self.get_dfs_navigator(self.size_seq)
+            s = self.size_seq.pop(0)
+            facets = []
+            facet = []
+            for _ in range(s):
+                facet += [_]
 
-        self.dfs_locator = tuple([0])
-        self.update_incrementally(facet, facets)
+            self.dfs_locator = tuple([0])
+            self.update_incrementally(facet, facets)
 
-        for _nav in nav:
-            _nav = list(_nav)
-            _nav.pop(0)
-            idx = 0
-            dfs_locator = [0]
-            self.dfs_locator = tuple(dfs_locator)
-            while len(_nav) > 0:
-                ns_vtx = _nav.pop(0)
-                next_size = self.size_seq[idx]
-                self.ns_vtx = ns_vtx
-
-                pool = self.get_fids_per_dfs_locator(self.dfs_locator)
-                dfs_locator += [ns_vtx]
+            for _nav in nav:
+                _nav = list(_nav)
+                _nav.pop(0)
+                idx = 0
+                dfs_locator = [0]
                 self.dfs_locator = tuple(dfs_locator)
+                while len(_nav) > 0:
+                    ns_vtx = _nav.pop(0)
+                    next_size = self.size_seq[idx]
+                    self.ns_vtx = ns_vtx
 
-                for facets_id in pool:
-                    facets = list(self.id2facets[facets_id])
-                    self.created_vids = self.get_created_vids(facets)
-                    if ns_vtx == 0:
-                        self.fill_wo_creating_new_vertices(next_size, facets)
-                    elif ns_vtx == next_size:
-                        self.fill_with_only_ones(next_size, facets)
-                    else:
-                        self.fill_w_creating_new_vertices(next_size, facets, ns_vtx)
-                idx += 1
+                    pool = self.get_fids_per_dfs_locator(self.dfs_locator)
+                    dfs_locator += [ns_vtx]
+                    self.dfs_locator = tuple(dfs_locator)
+
+                    for facets_id in pool:
+                        facets = list(self.id2facets[facets_id])
+                        self.created_vids = self.get_created_vids(facets)
+                        if ns_vtx == 0:
+                            self.fill_wo_creating_new_vertices(next_size, facets)
+                        elif ns_vtx == next_size:
+                            self.fill_with_only_ones(next_size, facets)
+                        else:
+                            self.fill_w_creating_new_vertices(next_size, facets, ns_vtx)
+                    idx += 1
+        except WeCanStopSignal:
+            return
+
+    def traceback(self, p):
+        ps = [p]
+        while p is not None:
+            ps += [self.states[p]["p"]]
+            p = self.states[p]["p"]
+        return ps
 
     # def get_placed_order_per_fid(self, _id):
     #     flen = len(self.id2facets[_id])
