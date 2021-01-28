@@ -2,6 +2,7 @@ from simplicial_test import validators
 from simplicial_test.utils import *
 from itertools import combinations
 from simplicial_test.enumeration import sort_facets
+from functools import partial
 
 from .mongo import DB
 
@@ -21,7 +22,7 @@ class Test(SimplexRegistrar):
 
     """
 
-    def __init__(self, degree_list, size_list, level=0, blocked_sets=None, _dlist=None, _slist=None, level_map=None,
+    def __init__(self, degree_list, size_list, level=0, blocked_sets=None, level_map=None,
                  depth=1e2, width=1e2, trim_ones_first=True, conn=None, verbose=False):
 
         super().__init__()
@@ -29,11 +30,10 @@ class Test(SimplexRegistrar):
         num_ones = 0
         if level == 0:
             if trim_ones_first:
-                size_list, degree_list, num_ones = trim_ones(size_list, degree_list)
+                size_list, degree_list, num_ones = pair_one_by_one(size_list, degree_list)
                 for _ in range(num_ones):
                     self.facets_to_append += [(len(degree_list) + _,)]
 
-        self.logbook = defaultdict(dict)
         self.depth = depth
         self.width = width
 
@@ -46,7 +46,6 @@ class Test(SimplexRegistrar):
         self._sorted_s = np.array(deepcopy(self.SIZE_LIST), dtype=np.int_)
         self._sorted_d = np.array(deepcopy(self.DEGREE_LIST), dtype=np.int_)
 
-        self.deg_seq = np.zeros(self.n, dtype=np.int_)
         self.identifier = list()
 
         if blocked_sets is None:
@@ -58,15 +57,8 @@ class Test(SimplexRegistrar):
         self.current_facets = list()
         self.callback_data = dict()  # level: facets
 
-        self._DEGREE_LIST = _dlist
-        if self._DEGREE_LIST is None:
-            self._DEGREE_LIST = self.DEGREE_LIST
-        self._SIZE_LIST = _slist
-        if self._SIZE_LIST is None:
-            self._SIZE_LIST = self.SIZE_LIST
-
         if level == 0:
-            self.conn = DB("simplicial", "deadends", self._DEGREE_LIST.tolist(), self._SIZE_LIST.tolist(), num_ones)
+            self.conn = DB("simplicial", "deadends", self.DEGREE_LIST.tolist(), self.SIZE_LIST.tolist(), num_ones)
             self.conn.init()
         else:
             self.conn = conn
@@ -74,12 +66,12 @@ class Test(SimplexRegistrar):
         self._level = level + 1
         self.level_map = level_map
         if self.level_map is None:
-            self.level_map = dict()
-            self.level_map[self._level] = dict()
-            self.level_map[0] = dict()
-            for _ in range(self.n):
-                self.level_map[self._level][_] = None
-                self.level_map[0][_] = _
+            self.level_map = defaultdict(partial(np.ndarray, len(degree_list), int))
+            self.level_map[-1] = self.DEGREE_LIST
+            self.level_map[self._level].fill(-1)
+            for ind, _ in enumerate(degree_list):
+                self.level_map[0][ind] = ind
+
         self.num_failures = 0
         self.explored = defaultdict(list)
         if verbose:
@@ -102,7 +94,7 @@ class Test(SimplexRegistrar):
         facets = self.identifier2facets()
         remaining_degs = self.DEGREE_LIST - compute_dpv(facets, n=self.n, is_sorted=False)
         level_map = self.level_map[self._level - 1]
-        for idx, _ in enumerate(self._DEGREE_LIST):
+        for idx, _ in enumerate(self.level_map[-1]):
             if level_map[idx] is not None and remaining_degs[level_map[idx]] != 0:
                 key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[idx]) + [_])
                 vsc[key] += [level_map[idx]]
@@ -130,23 +122,23 @@ class Test(SimplexRegistrar):
             # whereas larger_simplices is anew for each level.
             if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
-            if tuple(sorted(list(facet))) in self.logbook:
+            if tuple(sorted(list(facet), reverse=True)) in self.identifier2facets():
                 continue
             ind, reason = self.validate(facet)
             if ind:
                 picked_facet, picked_facet_id = self.register(facet)
-                return picked_facet, picked_facet_id
+                self.identifier += [picked_facet_id]
+                return
             else:
                 self.num_failures += 1
                 self.conn.add_to_failed_attempts()
                 for key in self.level_map.keys():
                     if key >= self._level:
-                        self.level_map[key] = {}
+                        self.level_map[key] = np.empty(len(self.level_map[-1]), dtype=np.int_)
 
     def validate(self, facet) -> (bool, str):
         """
         This function must return True in order for the candidate facet to be considered.
-        In other words, if any condition appears to be True, we will not accept the candidate facet.
 
         Parameters
         ----------
@@ -157,22 +149,27 @@ class Test(SimplexRegistrar):
         -------
 
         """
+        if len(self._sorted_s) == 0:
+            return True, "Last facet explored."
         token = validators.simple_validate(self._sorted_d, self._sorted_s, self.identifier2facets(), facet)
         if type(token[0]) == bool:
             return token
         else:
             wanting_degs, sizes, current_facets = token
-
         blocked_sets = self.blocked_sets
         for blocked_set in blocked_sets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):  # useful
                 return False, "The remaining facets are doomed to fail the no-inclusion constraint."
-        if Counter(wanting_degs)[len(sizes)] > 0:
+        if Counter(wanting_degs)[len(sizes)] != 0:
             _ = validators.validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets)
             if _[0]:  # useful
                 return False, "9"
             wanting_degs, sizes, collected_facets, exempt_vids = _[1]
             if np.sum(wanting_degs) == np.sum(sizes) == 0:
+                # facets = [exempt_vids]
+                # self.current_facets = current_facets
+                # self.callback_data[self._level] = current_facets + facets + collected_facets
+                # raise WeCanStopSignal
                 return True, "Last facet explored after must-do pairing."
         else:
             exempt_vids = []
@@ -185,8 +182,6 @@ class Test(SimplexRegistrar):
                 wanting_degs, sizes, mapping2shrinked, mapping2enlarged,
                 blocked_sets=blocked_sets,
                 level_map=self.level_map,
-                _dlist=self._DEGREE_LIST,
-                _slist=self._SIZE_LIST,
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
@@ -208,9 +203,8 @@ class Test(SimplexRegistrar):
             return False, "No valid facet found at a higher level."
 
     def _recursive_is_simplicial(self, degs, sizes, mapping2shrinked, mapping2enlarged,
-                                 blocked_sets=None, level_map=None, _dlist=None, _slist=None, verbose=False
-                                 ) -> (bool, list):
-        self._compute_level_map(mapping2shrinked)
+                                 blocked_sets=None, level_map=None, verbose=False) -> (bool, list):
+        self.level_map = compute_level_map(self.level_map, self._level, mapping2shrinked)
         try:
             blocked_sets = list(sort_facets(blocked_sets))
             _ = (
@@ -224,53 +218,41 @@ class Test(SimplexRegistrar):
                 self.explored[self._level] += [_]
 
             st = Test(degs, sizes, level=self._level, blocked_sets=blocked_sets, level_map=level_map,
-                      _dlist=self._DEGREE_LIST, _slist=self._SIZE_LIST, conn=self.conn,
+                      conn=self.conn,
                       verbose=verbose)
-            # facets: facets from a deeper level
-            deeper_facet_is_simplicial, facets = st.is_simplicial()
+            deeper_facet_is_simplicial, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
         except NoMoreBalls:
             raise NoMoreBalls(self._level)
         if deeper_facet_is_simplicial:
-            # transform the facets collected from a deeper level
-            return True, get_enlarged_seq(mapping2enlarged, facets[self._level + 1])
+            return True, get_mapped_seq(mapping2enlarged, cb_data[self._level + 1])  # transform the facets collected from a deeper level
         else:
             return False, list()
-
-    def _compute_level_map(self, mapping2shrinked):
-        if self._level > 1:
-            self.level_map[self._level] = dict()
-            n = len(self.level_map[1].keys())
-            for _ in range(n):
-                vtx_current_view = self.level_map[self._level - 1][_]
-                if vtx_current_view is None:
-                    self.level_map[self._level][_] = None
-                    continue
-                try:
-                    self.level_map[self._level][_] = mapping2shrinked[vtx_current_view]
-                except KeyError:
-                    self.level_map[self._level][_] = None
-        else:
-            n = self.n
-            for _ in range(n):
-                try:
-                    self.level_map[1][_] = mapping2shrinked[_]
-                except KeyError:
-                    self.level_map[1][_] = None
 
     def is_simplicial(self):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
             self.conn.add_to_failed_attempts()
             return False, tuple()
         else:
-            if self._level - 1 == 0 and len(self._sorted_d) == len(self._sorted_s) == 0:
-                self.conn.mark_simplicial()
-                return True, tuple(self.facets_to_append)
+            if sum(self._sorted_d) == sum(self._sorted_s) == 0:
+                self.callback_data[self._level] = self.identifier2facets()
+                if self._level - 1 == 0:
+                    self.conn.mark_simplicial()
+                    return True, tuple(self.facets_to_append)
+                return True, self.callback_data
 
         while True:
+            # Here, assuming our algorithm is all good, we want to check if we indeed find the simplicial complex
+            if len(self._sorted_s) == 0:
+                self.callback_data[self._level] = self.identifier2facets()
+                if self._level - 1 == 0:  # the very first level
+                    self.conn.mark_simplicial()
+                    return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
+                return True, self.callback_data
+
             s = self._sorted_s[0]
             self._sorted_s = np.delete(self._sorted_s, 0)
             try:
-                picked_facet, picked_facet_id = self.sample_simplex_greedy(s)
+                self.sample_simplex_greedy(s)
             except WeCanStopSignal:
                 if self._level - 1 == 0:  # the very first level
                     self.conn.mark_simplicial()
@@ -281,21 +263,3 @@ class Test(SimplexRegistrar):
                 if self._level - 1 == 0:
                     return False, tuple()
                 raise NoMoreBalls(f"No more usable proposals at level={self._level}; roll back or say no.")
-            else:
-                update_deg_seq(self.deg_seq, picked_facet, +1)
-                if validators.validate_interm_degs(self.DEGREE_LIST, self.deg_seq):
-                    self.identifier += [picked_facet_id]
-                else:
-                    # Backtrack
-                    self.log_forbidden(tuple(sorted(list(picked_facet))), "failed validate_interm_degs")
-                    update_deg_seq(self.deg_seq, picked_facet, -1)
-                    self._sorted_s = np.insert(self._sorted_s, 0, len(self.id2name[picked_facet_id]))
-                    continue
-                # Here, assuming our algorithm is all good, we want to check if we indeed find the simplicial complex
-                if len(self._sorted_s) == 0:
-                    self.callback_data[self._level] = self.identifier2facets()
-                    if self._level - 1 == 0:  # the very first level
-                        self.conn.mark_simplicial()
-                        return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
-                    return True, self.callback_data
-

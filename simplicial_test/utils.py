@@ -8,6 +8,27 @@ import matplotlib.colors as colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
+def compute_level_map(level_map, level, mapping2shrinked):
+    n = len(level_map[-1])
+    if level > 1:
+        for _ in range(n):
+            vtx_current_view = level_map[level - 1][_]
+            if vtx_current_view == -1:
+                level_map[level][_] = -1
+                continue
+            try:
+                level_map[level][_] = mapping2shrinked[vtx_current_view]
+            except KeyError:
+                level_map[level][_] = -1
+    else:
+        for _ in range(n):
+            try:
+                level_map[1][_] = mapping2shrinked[_]
+            except KeyError:
+                level_map[1][_] = -1
+    return level_map
+
+
 def flatten(nested_list):
     return [item for sublist in nested_list for item in sublist]
 
@@ -64,8 +85,8 @@ def get_remaining_slots(degs, facets, facet):
     """
     n = len(degs)
     remaining = degs - compute_dpv(facets, n=n, is_sorted=False)
-    return np.array([remaining[_] - 1 if _ in set(facet) else remaining[_] for _ in range(n)]), \
-           np.array([0 if _ in set(facet) else remaining[_] for _ in range(n)])  # non_shielding
+    return np.array([remaining[_] - 1 if _ in set(facet) else remaining[_] for _ in range(n)], dtype=np.int_), \
+           np.array([0 if _ in set(facet) else remaining[_] for _ in range(n)], dtype=np.int_)  # non_shielding
 
 
 def groupby_vtx_symm_class(d_input):
@@ -203,7 +224,7 @@ def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_
     """
     if exempt_vids is None:
         exempt_vids = []
-    shielding_facets = list()
+    shielding_facets = []
     # if a facet contains these must_be_filled_vids (or 'mbfv')
     mbfv = set(must_be_filled_vids).union(set(exempt_vids))
     for facet in current_facets:  # for all existing facets
@@ -215,22 +236,14 @@ def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_
     return shielding_facets  # then we must avoid the slots in these shielding_facets
 
 
-def get_nonshielding_vids(shielding_facets, wanting_degs):
+def get_nonshielding_vids(n, shielding_facets):
     nonshielding_vids = set()
-    n = len(wanting_degs)
-    # print("-> shielding_facets = ", shielding_facets)
     for facet in shielding_facets:
         non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
         if len(nonshielding_vids) == 0:
             nonshielding_vids = non_shielding_part
         else:
             nonshielding_vids.intersection_update(non_shielding_part)
-        # remaining number of facets must be able to "hide" in those non_shielding slots, at least
-        # if remaining > np.sum(wanting_degs[np.array(list(nonshielding_vids), dtype=np.int_)]):
-        #     print(f"While checking if the remaining number of facets being able to hide in the nonshielding slots, ")
-        #     print(f"We found that remaining={remaining} but nonshielding_vids={nonshielding_vids} (i.e., available sites to hide = {np.sum(wanting_degs[np.array(list(nonshielding_vids), dtype=np.int_)])})")
-        #     print("Therefore, we reject that the nodes being filled this way.")
-        #     raise NoSlotError("The custom error in get_nshielding.")
     return nonshielding_vids
 
 
@@ -242,28 +255,26 @@ def basic_validations_degs_and_sizes(degs, sizes):
     return True
 
 
-def remove_ones(s, wanting_degs, choose_from=set()):
-    # orig_both = deepcopy(wanting_degs)
-    # _both = deepcopy(wanting_degs)
-    # wanting_degs = [_ for _ in wanting_degs]
-    # for _ in range(Counter(s)[1]):
-    #     wanting_degs.remove(1)
-    # wanting_degs = np.array(wanting_degs)
-    # print(type(choose_from), f"np.where(wanting_degs == 1)[0] = {np.where(wanting_degs == 1)[0]}")
-    if len(choose_from) == 0:
-        raise NoSlotError
-    all_one_sites = np.where(wanting_degs == 1)[0]
-    if choose_from is not None and type(choose_from) is set:
-        choose_from.intersection_update(set(all_one_sites))
-        if not choose_from:
-            raise NoSlotError
-    # print(f"choose_from is {choose_from}")
-    removed_sites = np.array(list(choose_from))[:Counter(s)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
-    wanting_degs[removed_sites] = 0
-    return wanting_degs, removed_sites.tolist()
+def remove_ones(sizes, wanting_degs, choose_from=None):
+    removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[:Counter(sizes)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
+    wanting_degs[removed_vtx_sites] = 0
+    return wanting_degs, removed_vtx_sites.tolist()
 
 
-def trim_ones(size_list, degree_list) -> (list, list):
+def pair_one_by_one(size_list, degree_list) -> (list, list):
+    """
+    This function is used to pair up the ones in size/deg lists, since this is the only plausible situation.
+    Note that it is only applied when level=0.
+
+    Parameters
+    ----------
+    size_list
+    degree_list
+
+    Returns
+    -------
+
+    """
     size_list = list(size_list)
     degree_list = list(degree_list)
     _1 = Counter(size_list)[1]
@@ -332,7 +343,7 @@ def sort_helper(st) -> list:
     return translated
 
 
-def get_enlarged_seq(mapping2enlarged, facets) -> list:
+def get_mapped_seq(mapping2enlarged, facets) -> list:
     # _, mapping = get_seq2seq_mapping(degs)
     reduced_facets = list(map(lambda x: tuple(map(lambda y: mapping2enlarged[y], x)), facets))
     # print(f"The facets above have been `enlarged` (i.e., higher-level) to: {reduced_facets}")
@@ -502,62 +513,3 @@ def get_partition(n=1):
         except StopIteration:
             break
     return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)
-
-
-# DEPRECATED, possible use methods included
-def get_inv_level_map(level_map):
-    inv_level_map = dict()
-    for key in level_map.keys():
-        inv_level_map[key] = {v: k for k, v in level_map[key].items()}
-
-    # In SimplicialTest.__init__()
-    # self.inv_level_map = get_inv_level_map(self.level_map)
-    #
-    # self.level_ns = level_ns
-    # if self.level_ns is None:
-    #     self.level_ns = dict()
-    #     self.level_ns[self._level] = set()
-    #
-    # In SimplicialTest.sample_simplex_greedy()
-    # if_continue = False
-    # candidate_facet_set = set(list(candidate_facet))
-    #
-    #
-    # leftover_levelwise = dict()
-    # for level in range(1, self._level):
-    #     leftover = dict()
-    #     for _id in self.level_ns[level]:
-    #         try:
-    #             id_at_current_level = self.inv_level_map[level - 1][_id]
-    #             leftover[id_at_current_level] = self._sorted_d[id_at_current_level]
-    #         except KeyError:
-    #             pass
-    #     leftover_levelwise[level] = leftover
-    #     if leftover != dict():
-    #         leftover_values_list = list(leftover.values())
-    #         if np.sum(leftover_values_list) < len(self._sorted_s):
-    #             raise NoMoreBalls()
-    #
-    #
-    #     if leftover == dict():
-    #         continue
-    #     leftover_keys_list = list(leftover.keys())
-    #     leftover_values_list = list(leftover.values())
-    #     leftover_used = len(set(leftover_keys_list).intersection(candidate_facet_set))
-    #     if np.sum(leftover_values_list) - leftover_used < len(self._sorted_s):
-    #         if_continue = True
-    #         print(f"(l={self._level}) leftover is {leftover}; len(self._sorted_s)={len(self._sorted_s)}")
-    #         break
-    # if if_continue:
-    #     print(f"(l={self._level}) {candidate_facet_set} is not good. \n")
-    #     continue
-    #
-    # for key in self.level_ns.keys():
-    #     if key >= self._level:
-    #         self.level_ns[key] = set()
-    #
-    # In SimplicialTest.validate()
-    # self.level_ns[self._level] = set(list(range(len(np.nonzero(self._sorted_d)[0])))).difference(
-    #     set(list(candidate_facet)))
-
-    return inv_level_map
