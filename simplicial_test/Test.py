@@ -4,8 +4,6 @@ from itertools import combinations
 from simplicial_test.enumeration import sort_facets
 from functools import partial
 
-from .mongo import DB
-
 import sys
 
 sys.setrecursionlimit(10 ** 6)
@@ -23,11 +21,10 @@ class Test(SimplexRegistrar):
     """
 
     def __init__(self, degree_list, size_list, level=0, blocked_sets=None, level_map=None,
-                 depth=1e2, width=1e2, trim_ones_first=True, conn=None, verbose=False):
+                 depth=1e2, width=1e2, trim_ones_first=True, verbose=False):
 
         super().__init__()
         self.facets_to_append = []
-        num_ones = 0
         if level == 0:
             if trim_ones_first:
                 size_list, degree_list, num_ones = pair_one_by_one(size_list, degree_list)
@@ -57,18 +54,13 @@ class Test(SimplexRegistrar):
         self.current_facets = list()
         self.callback_data = dict()  # level: facets
 
-        if level == 0:
-            self.conn = DB("simplicial", "deadends", self.DEGREE_LIST.tolist(), self.SIZE_LIST.tolist(), num_ones)
-            self.conn.init()
-        else:
-            self.conn = conn
-
         self._level = level + 1
         self.level_map = level_map
         if self.level_map is None:
             self.level_map = defaultdict(partial(np.ndarray, len(degree_list), int))
             self.level_map[-1] = self.DEGREE_LIST
             self.level_map[self._level].fill(-1)
+            self.level_map["time"].fill(0)
             for ind, _ in enumerate(degree_list):
                 self.level_map[0][ind] = ind
 
@@ -80,7 +72,7 @@ class Test(SimplexRegistrar):
                   f"Degree list: {self.DEGREE_LIST.tolist()}\n"
                   f"blocked_sets = {self.blocked_sets}\n"
                   # f"len::blocked_sets = {list(map(lambda x: len(x), self.blocked_sets))}\n"
-                  )
+            )
 
     def identifier2facets(self):
         facets = []
@@ -131,9 +123,9 @@ class Test(SimplexRegistrar):
                 return
             else:
                 self.num_failures += 1
-                self.conn.add_to_failed_attempts()
+                self.level_map["time"][self._level - 1] += 1
                 for key in self.level_map.keys():
-                    if key >= self._level:
+                    if type(key) is int and key >= self._level:
                         self.level_map[key] = np.empty(len(self.level_map[-1]), dtype=np.int_)
 
     def validate(self, facet) -> (bool, str):
@@ -166,11 +158,13 @@ class Test(SimplexRegistrar):
                 return False, "9"
             wanting_degs, sizes, collected_facets, exempt_vids = _[1]
             if np.sum(wanting_degs) == np.sum(sizes) == 0:
-                # facets = [exempt_vids]
-                # self.current_facets = current_facets
-                # self.callback_data[self._level] = current_facets + facets + collected_facets
-                # raise WeCanStopSignal
-                return True, "Last facet explored after must-do pairing."
+                self.current_facets = current_facets
+                for collected_facet in collected_facets:
+                    if set(exempt_vids).issubset(collected_facet):
+                        self.callback_data[self._level] = current_facets + collected_facets
+                        raise WeCanStopSignal
+                self.callback_data[self._level] = current_facets + [exempt_vids] + collected_facets
+                raise WeCanStopSignal
         else:
             exempt_vids = []
             collected_facets = []
@@ -185,7 +179,7 @@ class Test(SimplexRegistrar):
                 verbose=self.verbose
             )
         except NoMoreBalls as e:
-            self.conn.add_to_failed_attempts()
+            self.level_map["time"][self._level - 1] += 1
             if int(eval(str(e))) <= self.depth:
                 if self.num_failures > self.width:
                     raise NoMoreBalls
@@ -218,7 +212,6 @@ class Test(SimplexRegistrar):
                 self.explored[self._level] += [_]
 
             st = Test(degs, sizes, level=self._level, blocked_sets=blocked_sets, level_map=level_map,
-                      conn=self.conn,
                       verbose=verbose)
             deeper_facet_is_simplicial, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
         except NoMoreBalls:
@@ -230,13 +223,13 @@ class Test(SimplexRegistrar):
 
     def is_simplicial(self):
         if not validators.validate_data(self._sorted_d, self._sorted_s):
-            self.conn.add_to_failed_attempts()
+            self.level_map["time"][self._level - 1] += 1
             return False, tuple()
         else:
             if sum(self._sorted_d) == sum(self._sorted_s) == 0:
                 self.callback_data[self._level] = self.identifier2facets()
                 if self._level - 1 == 0:
-                    self.conn.mark_simplicial()
+                    self.level_map[0].fill(0)
                     return True, tuple(self.facets_to_append)
                 return True, self.callback_data
 
@@ -245,7 +238,7 @@ class Test(SimplexRegistrar):
             if len(self._sorted_s) == 0:
                 self.callback_data[self._level] = self.identifier2facets()
                 if self._level - 1 == 0:  # the very first level
-                    self.conn.mark_simplicial()
+                    self.level_map[0].fill(0)
                     return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
                 return True, self.callback_data
 
@@ -255,11 +248,11 @@ class Test(SimplexRegistrar):
                 self.sample_simplex_greedy(s)
             except WeCanStopSignal:
                 if self._level - 1 == 0:  # the very first level
-                    self.conn.mark_simplicial()
+                    self.level_map[0].fill(0)
                     return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
                 return True, self.callback_data
             except NoMoreBalls:
-                self.conn.add_to_failed_attempts()
+                self.level_map["time"][self._level - 1] += 1
                 if self._level - 1 == 0:
                     return False, tuple()
                 raise NoMoreBalls(f"No more usable proposals at level={self._level}; roll back or say no.")

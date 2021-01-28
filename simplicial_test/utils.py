@@ -408,6 +408,20 @@ def if_facets_simplicial(facets) -> bool:
 
 
 def filter_blocked_facets(blocked_facets, exempt_vids):
+    """
+
+    Supposedly every existing facet will block potential facets in the next level, however, this only applies if
+    it contains `exempt_vids` because these vertices will be shared by next-level candidates.
+
+    Parameters
+    ----------
+    blocked_facets
+    exempt_vids
+
+    Returns
+    -------
+
+    """
     # print(f"in filter_blocked_facets (blocked_facets, exempt_vids) = {(blocked_facets, exempt_vids)}")
     filtered = []
     for facet in blocked_facets:

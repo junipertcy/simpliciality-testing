@@ -2,22 +2,13 @@ from simplicial_test.utils import *
 
 
 def validate_data(sorted_d, sorted_s):
-    # n = len(sorted_d)
     m = len(sorted_s)
-
     if len(sorted_d) > 0 and np.max(sorted_d) > m:
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False
     if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
-
-    # for ind_d in range(0, len(sorted_d) + 1):
-    #     _ = 0
-    #     for s in range(2 + ind_d, sorted_s[0] + 1):
-    #         _ += Counter(sorted_s)[s]
-    #     if _ < sorted_d[ind_d]:
-    #         return False
     return True
 
 
@@ -26,18 +17,15 @@ def simple_validate(degs, sizes, facets, facet, enumeration=False):
     wanting_degs, non_shielding = get_remaining_slots(degs, facets, facet)  # wanting_degs (non_shielding & shielding)
     if enumeration:
         if min(wanting_degs) < 0:
-            # print("1")
             return False, "added in Jan 14"
     # if len(sizes) == 0:
     #     return True, "Last facet explored."
     if len(sizes) == 1:
         for _ in current_facets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(_)):
-                # print("2")
                 return False, "Second last facet explored. " \
                               "But the very last facet is doomed to fail the no-inclusion constraint."
     if np.any(wanting_degs > len(sizes)):  # useful
-        # print("3")
         return False, "Some degrees require more facets than the actual remaining number."
 
     if np.count_nonzero(wanting_degs) < sizes[0]:  # useful
@@ -87,10 +75,11 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets) -> (
         if len(sizes) > 1:
             if not basic_validations_degs_and_sizes(degs=wanting_degs, sizes=sizes):
                 return True, tuple()
-        if Counter(sizes)[0] == len(sizes):  # essentially means we are done. should raise WeCanStopSignal. todo
-            break
-        else:
+        if Counter(sizes)[0] != len(sizes):
             must_be_filled_vids = np.where(wanting_degs == len(sizes))[0].tolist()
+            exempt_vids += must_be_filled_vids
+        else:
+            break
 
         sizes -= Counter(wanting_degs)[len(sizes)]
         wanting_degs[wanting_degs == len(sizes)] = 0
@@ -113,75 +102,20 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets) -> (
                 return True, tuple()
             wanting_degs, removed_sites = remove_ones(sizes, wanting_degs, choose_from=nonshielding_vids)
             sizes = sizes[sizes != 1]
-            collected_facets += [exempt_vids + must_be_filled_vids + [_] for _ in removed_sites]  #old
-        exempt_vids += must_be_filled_vids
+            collected_facets += [exempt_vids + [_] for _ in removed_sites]  # collected_facets immer from removed_sites
+
+    if np.sum(wanting_degs) == np.sum(sizes) == 0:
+        if validate_issubset_blocked_sets(exempt_vids, blocked_sets=blocked_sets):
+            return True, tuple()
+        # for facet in collected_facets:
+        #     if validate_issubset_blocked_sets(facet, blocked_sets=blocked_sets):
+        #         return True, tuple()
     return False, (wanting_degs, sizes, collected_facets, exempt_vids)
 
 
-def validate_issubset(id2name, candidate_facet, _id):
-    """
-    Verify that the selected facet not be a subset of any higher facet.
-
-    Parameters
-    ----------
-    candidate_facet
-    _id
-    blocked_sets
-
-    Returns
-    -------
-
-    """
-    if _id is not None:
-        if set(candidate_facet).issubset(set(id2name[_id])):
-            return True
-    return False
-
-
-def validate_issubset_larger_simplices(candidate_facet, larger_simplices=None):
-    if larger_simplices is not None:
-        for simplex in larger_simplices:
-            if set(candidate_facet).issubset(set(simplex)):
-                return True
-    return False
-
-
 def validate_issubset_blocked_sets(candidate_facet, blocked_sets=None):
-    # if candidate_facet == (0, 1, 2, 3, 4, 5, 6):
-    #     verbose = True
-    # else:
-    #     verbose = False
     if blocked_sets is not None:
         for facet in blocked_sets:
-            # if verbose:
-            # print(candidate_facet, facet, set(candidate_facet).issubset(set(facet)))
             if set(candidate_facet).issubset(set(facet)):
                 return True
     return False
-
-
-def check_reduced_facets(facets, current_facets):
-    """
-
-    Parameters
-    ----------
-    facets
-    current_facets
-
-    Returns
-    -------
-
-    """
-    for facet in facets:
-        for larger_facets in current_facets:
-            if set(facet).issubset(set(larger_facets)):
-                return False, "8"
-    return True, "0"
-
-
-def is_reduced_seq(wanting_degs, sizes, degrees) -> bool:
-    return Counter(np.equal(wanting_degs, degrees))[True] == Counter(wanting_degs)[len(sizes)]
-
-#
-# def validate_interm_degs(degs, intermediate_degs):
-#     return np.all(degs - intermediate_degs >= 0)
