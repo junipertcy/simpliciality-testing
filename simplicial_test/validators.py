@@ -18,8 +18,8 @@ def simple_validate(degs, sizes, facets, facet, enumeration=False):
     if enumeration:
         if min(wanting_degs) < 0:
             return False, "added in Jan 14"
-    # if len(sizes) == 0:
-    #     return True, "Last facet explored."
+    if len(sizes) == 0:
+        return True, "Last facet explored."
     if len(sizes) == 1:
         for _ in current_facets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(_)):
@@ -67,7 +67,14 @@ def validate_nonshielding(curent_sizes, wanting_degs, non_shielding):
     return False  # safe!
 
 
-def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets) -> (bool, tuple):
+def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verbose=False) -> (bool, tuple):
+    if verbose:
+        print(f"----- (BEGIN: reducing seq) -----\n"
+              f"Wanting degrees: {wanting_degs}\n"
+              f"Size list: {sizes}\n"
+              f"Current facets: {current_facets}\n"
+              f"blocked_sets = {blocked_sets}"
+              )
     collected_facets = []
     exempt_vids = []
     sizes = np.array(sizes, dtype=np.int_)
@@ -83,7 +90,8 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets) -> (
 
         sizes -= Counter(wanting_degs)[len(sizes)]
         wanting_degs[wanting_degs == len(sizes)] = 0
-
+        if min(sizes) < 0:
+            return True, tuple()
         if Counter(sizes)[1] > 0:
             if Counter(sizes)[1] > Counter(wanting_degs)[1]:
                 return True, tuple()
@@ -95,7 +103,6 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets) -> (
                 nonshielding_vids = set(np.nonzero(wanting_degs)[0])
             else:
                 nonshielding_vids = get_nonshielding_vids(len(wanting_degs), shielding_facets)
-
             all_one_sites = np.where(wanting_degs == 1)[0]
             nonshielding_vids.intersection_update(set(all_one_sites))
             if not nonshielding_vids:
@@ -110,6 +117,14 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets) -> (
         # for facet in collected_facets:
         #     if validate_issubset_blocked_sets(facet, blocked_sets=blocked_sets):
         #         return True, tuple()
+    if verbose:
+        print(f"----- (↓ Returning these data ↓) -----\n"
+              f"Wanting degrees: {wanting_degs}\n"
+              f"Size list: {sizes}\n"
+              f"Collected facets: {collected_facets}\n"
+              f"Exempt vertex ids: {exempt_vids}\n"
+              f"----- (END: reducing seq) -----"
+              )
     return False, (wanting_degs, sizes, collected_facets, exempt_vids)
 
 

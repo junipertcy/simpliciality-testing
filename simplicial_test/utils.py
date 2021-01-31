@@ -384,7 +384,8 @@ def get_seq2seq_mapping(degs):
 
 
 def compute_joint_seq(facets) -> (list, list):
-    # print(facets)
+    if len(facets) == 0:
+        raise ValueError("Empty input facets. Are you sure the input is correct?")
     flattened_facets = [item for sublist in facets for item in sublist]
     n = max(flattened_facets) - min(flattened_facets) + 1
     degs = np.zeros(n, dtype=np.int_)
@@ -518,7 +519,7 @@ def paint_landscape(mat, output=None, dpi=300, ):
         plt.savefig(output, dpi=dpi, transparent=True)
 
 
-def get_partition(n=1):
+def get_partition(n=1, sortby="asc"):
     gen = accel_asc(n)
     partitions = []
     while True:
@@ -526,4 +527,8 @@ def get_partition(n=1):
             partitions += [sorted(next(gen), reverse=True)]
         except StopIteration:
             break
-    return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)
+    if sortby == "asc":
+        return partitions
+    else:
+        return sorted(partitions, key=lambda x: max(x) - len(x), reverse=True)
+        # return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)

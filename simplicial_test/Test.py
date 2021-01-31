@@ -57,22 +57,22 @@ class Test(SimplexRegistrar):
         self._level = level + 1
         self.level_map = level_map
         if self.level_map is None:
-            self.level_map = defaultdict(partial(np.ndarray, len(degree_list), int))
+            self.level_map = defaultdict(partial(np.ndarray, max(len(degree_list), len(size_list)), int))
             self.level_map[-1] = self.DEGREE_LIST
             self.level_map[self._level].fill(-1)
             self.level_map["time"].fill(0)
             for ind, _ in enumerate(degree_list):
                 self.level_map[0][ind] = ind
 
-        self.num_failures = 0
         self.explored = defaultdict(list)
+        self.summary = {}
         if verbose:
-            print(f"---------- (l={self._level}) ----------\n"
+            print(f"========== (l={self._level}) ==========\n"
                   f"Size list: {self.SIZE_LIST.tolist()}\n"
                   f"Degree list: {self.DEGREE_LIST.tolist()}\n"
-                  f"blocked_sets = {self.blocked_sets}\n"
+                  f"blocked_sets = {self.blocked_sets}"
                   # f"len::blocked_sets = {list(map(lambda x: len(x), self.blocked_sets))}\n"
-            )
+                  )
 
     def identifier2facets(self):
         facets = []
@@ -118,11 +118,11 @@ class Test(SimplexRegistrar):
                 continue
             ind, reason = self.validate(facet)
             if ind:
+                print(f"(l={self._level}) facet={facet} is selected.")
                 picked_facet, picked_facet_id = self.register(facet)
                 self.identifier += [picked_facet_id]
                 return
             else:
-                self.num_failures += 1
                 self.level_map["time"][self._level - 1] += 1
                 for key in self.level_map.keys():
                     if type(key) is int and key >= self._level:
@@ -141,8 +141,6 @@ class Test(SimplexRegistrar):
         -------
 
         """
-        if len(self._sorted_s) == 0:
-            return True, "Last facet explored."
         token = validators.simple_validate(self._sorted_d, self._sorted_s, self.identifier2facets(), facet)
         if type(token[0]) == bool:
             return token
@@ -153,7 +151,7 @@ class Test(SimplexRegistrar):
             if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):  # useful
                 return False, "The remaining facets are doomed to fail the no-inclusion constraint."
         if Counter(wanting_degs)[len(sizes)] != 0:
-            _ = validators.validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets)
+            _ = validators.validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verbose=self.verbose)
             if _[0]:  # useful
                 return False, "9"
             wanting_degs, sizes, collected_facets, exempt_vids = _[1]
@@ -181,7 +179,7 @@ class Test(SimplexRegistrar):
         except NoMoreBalls as e:
             self.level_map["time"][self._level - 1] += 1
             if int(eval(str(e))) <= self.depth:
-                if self.num_failures > self.width:
+                if self.level_map["time"][self._level - 1] > self.width:
                     raise NoMoreBalls
                 # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
                 return False, "keep looking for balls!"
@@ -198,61 +196,71 @@ class Test(SimplexRegistrar):
 
     def _recursive_is_simplicial(self, degs, sizes, mapping2shrinked, mapping2enlarged,
                                  blocked_sets=None, level_map=None, verbose=False) -> (bool, list):
-        self.level_map = compute_level_map(self.level_map, self._level, mapping2shrinked)
-        try:
-            blocked_sets = list(sort_facets(blocked_sets))
-            _ = (
-                tuple(sizes),
-                tuple(sorted(degs, reverse=True)),
-                tuple(blocked_sets)
-            )
-            if _ in self.explored[self._level]:
-                raise NoMoreBalls(self._level)
-            else:
-                self.explored[self._level] += [_]
+        lv = self._level
+        self.level_map = compute_level_map(self.level_map, lv, mapping2shrinked)
+        blocked_sets = sort_facets(blocked_sets)
+        _ = (
+            tuple(sizes),
+            tuple(sorted(degs, reverse=True)),
+            tuple(blocked_sets)
+        )
+        if _ in self.explored[lv]:
+            raise NoMoreBalls(lv)
+        else:
+            self.explored[lv] += [_]
 
-            st = Test(degs, sizes, level=self._level, blocked_sets=blocked_sets, level_map=level_map,
-                      verbose=verbose)
+        st = Test(degs, sizes, level=lv, blocked_sets=blocked_sets, level_map=level_map,
+                  verbose=verbose)
+        try:
             deeper_facet_is_simplicial, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
         except NoMoreBalls:
-            raise NoMoreBalls(self._level)
+            raise NoMoreBalls(lv)
         if deeper_facet_is_simplicial:
-            return True, get_mapped_seq(mapping2enlarged, cb_data[self._level + 1])  # transform the facets collected from a deeper level
+            return True, get_mapped_seq(mapping2enlarged,
+                                        cb_data[lv + 1])  # transform the facets collected from a deeper level
         else:
             return False, list()
 
     def is_simplicial(self):
+        lv = self._level
         if not validators.validate_data(self._sorted_d, self._sorted_s):
-            self.level_map["time"][self._level - 1] += 1
-            return False, tuple()
+            self.level_map["time"][lv - 1] += 1
+            return False, self.__mark(False, tuple())["facets"]
         else:
             if sum(self._sorted_d) == sum(self._sorted_s) == 0:
-                self.callback_data[self._level] = self.identifier2facets()
-                if self._level - 1 == 0:
-                    self.level_map[0].fill(0)
-                    return True, tuple(self.facets_to_append)
+                self.callback_data[lv] = self.identifier2facets()
+                if lv - 1 == 0:
+                    return True, self.__mark(True, tuple(self.facets_to_append))["facets"]
                 return True, self.callback_data
-
         while True:
             # Here, assuming our algorithm is all good, we want to check if we indeed find the simplicial complex
             if len(self._sorted_s) == 0:
-                self.callback_data[self._level] = self.identifier2facets()
-                if self._level - 1 == 0:  # the very first level
-                    self.level_map[0].fill(0)
-                    return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
+                self.callback_data[lv] = self.identifier2facets()
+                if lv - 1 == 0:  # the very first level
+                    facets = tuple(sort_callback(self.callback_data[lv]) + self.facets_to_append)
+                    return True, self.__mark(True, facets)["facets"]
                 return True, self.callback_data
-
             s = self._sorted_s[0]
             self._sorted_s = np.delete(self._sorted_s, 0)
             try:
                 self.sample_simplex_greedy(s)
             except WeCanStopSignal:
-                if self._level - 1 == 0:  # the very first level
-                    self.level_map[0].fill(0)
-                    return True, tuple(sort_callback(self.callback_data[self._level]) + self.facets_to_append)
+                if lv - 1 == 0:  # the very first level
+                    facets = tuple(sort_callback(self.callback_data[lv]) + self.facets_to_append)
+                    return True, self.__mark(True, facets)["facets"]
                 return True, self.callback_data
             except NoMoreBalls:
-                self.level_map["time"][self._level - 1] += 1
-                if self._level - 1 == 0:
-                    return False, tuple()
-                raise NoMoreBalls(f"No more usable proposals at level={self._level}; roll back or say no.")
+                self.level_map["time"][lv - 1] += 1
+                if lv - 1 == 0:
+                    return False, self.__mark(False, tuple())["facets"]
+                raise NoMoreBalls(f"No more usable proposals at level={lv}; roll back or say no.")
+
+    def __mark(self, simplicial, facets):
+        self.summary["simplicial"] = simplicial
+        self.summary["conv_time"] = sum(self.level_map["time"])
+        self.summary["time"] = tuple(self.level_map["time"])
+
+        self.summary["degs"] = tuple(self.DEGREE_LIST)
+        self.summary["sizes"] = tuple(self.SIZE_LIST)
+        self.summary["facets"] = facets
+        return self.summary
