@@ -1,20 +1,43 @@
 from simplicial_test.utils import *
 
 
+def get_wanting_slots(degs, facet):
+    """
+    Used in the greedy case only.
+
+    Parameters
+    ----------
+    degs: wanting degrees
+    facet: candidate facet
+
+    Returns
+    -------
+
+    """
+    n = len(degs)
+    return np.array([degs[_] - 1 if _ in set(facet) else degs[_] for _ in range(n)], dtype=np.int_), \
+           np.array([0 if _ in set(facet) else degs[_] for _ in range(n)], dtype=np.int_)  # non_shielding
+
+
 def validate_data(sorted_d, sorted_s):
     m = len(sorted_s)
+    # n = len(sorted_d)
     if len(sorted_d) > 0 and np.max(sorted_d) > m:
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False
     if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
+    # if n < m:
+    #     return is_bigraphical(sorted_d, sorted_s)
+    # else:
+    #     return is_bigraphical(sorted_s, sorted_d)
     return True
 
 
-def simple_validate(degs, sizes, facets, facet, enumeration=False):
-    current_facets = facets + [facet]
-    wanting_degs, non_shielding = get_remaining_slots(degs, facets, facet)  # wanting_degs (non_shielding & shielding)
+def simple_validate(degs, sizes, facet, enumeration=False):
+    current_facets = [facet]
+    wanting_degs, non_shielding = get_wanting_slots(degs, facet)  # wanting_degs (non_shielding & shielding)
     if enumeration:
         if min(wanting_degs) < 0:
             return False, "added in Jan 14"
@@ -134,3 +157,37 @@ def validate_issubset_blocked_sets(candidate_facet, blocked_sets=None):
             if set(candidate_facet).issubset(set(facet)):
                 return True
     return False
+
+# def is_bigraphical(degs_1, degs_2):
+#     """
+#     Based on https://github.com/szhorvat/igraph/blob/6264a1bf0c3e6881413f140ec817b6c1e6310d9f/src/graphicality.c#L740.
+#
+#     Parameters
+#     ----------
+#     degs_1: the shorter vector
+#     degs_2
+#
+#     Returns
+#     -------
+#
+#     """
+#     n_1 = len(degs_1)
+#     n_2 = len(degs_2)
+#     res = True
+#     lhs_sum = 0
+#     partial_rhs_sum = 0
+#     i = 0
+#     for k in np.arange(0, n_1, 1):
+#         lhs_sum += degs_1[k]
+#         if k < n_1 - 1 and degs_1[k] == degs_1[k+1]:
+#             continue
+#
+#         while i < n_2 and degs_2[i] <= k + 1:
+#             partial_rhs_sum += degs_2[i]
+#             i += 1
+#
+#         if lhs_sum > partial_rhs_sum + (n_2 - i) * (k + 1):
+#             res = False
+#             break
+#
+#     return res

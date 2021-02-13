@@ -101,8 +101,11 @@ Suppose we have the sequences of degree distribution Î»1 and size distribution Î
 
 Installation
 ------------
-This program is tested on major platforms, including Windows. Please see the corresponding `Travis CI tests`_.
+The package can be installed with pip.
 
+::
+
+   pip install simplicial-test
 
 MISC notes (to clean up later)
 ------------------------------

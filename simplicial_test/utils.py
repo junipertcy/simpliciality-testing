@@ -3,6 +3,7 @@ from collections import defaultdict, Counter
 from copy import deepcopy
 
 import matplotlib as mpl
+from matplotlib import rc
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -69,24 +70,6 @@ def compute_dpv(facets, n=None, is_sorted=True):
         for _ in range(len(dpv.keys())):
             _dpv += [dpv[_]]
         return tuple(_dpv)
-
-
-def get_remaining_slots(degs, facets, facet):
-    """
-    Used in the greedy case only.
-
-    Parameters
-    ----------
-    facet: candidate facet
-
-    Returns
-    -------
-
-    """
-    n = len(degs)
-    remaining = degs - compute_dpv(facets, n=n, is_sorted=False)
-    return np.array([remaining[_] - 1 if _ in set(facet) else remaining[_] for _ in range(n)], dtype=np.int_), \
-           np.array([0 if _ in set(facet) else remaining[_] for _ in range(n)], dtype=np.int_)  # non_shielding
 
 
 def groupby_vtx_symm_class(d_input):
@@ -256,7 +239,8 @@ def basic_validations_degs_and_sizes(degs, sizes):
 
 
 def remove_ones(sizes, wanting_degs, choose_from=None):
-    removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[:Counter(sizes)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
+    removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[
+                        :Counter(sizes)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
     wanting_degs[removed_vtx_sites] = 0
     return wanting_degs, removed_vtx_sites.tolist()
 
@@ -468,17 +452,35 @@ def accel_asc(n):
         yield a[:k + 1]
 
 
-def paint_block(facets, output=None, dpi=300, ):
-    g = np.zeros([len(facets), max(flatten(facets)) - min(flatten(facets)) + 1])
+def paint_block(facets, limits=None, output=None, dpi=300, figsize=(8, 6)):
+    fig, ax = plt.subplots(1, 1, figsize=figsize, dpi=300)
+
+    if limits is not None:
+        limit_sizes, limit_degs = limits
+        g = np.zeros([limit_sizes, limit_degs])
+    else:
+        limit_sizes = limit_degs = np.infty
+        g = np.zeros([len(facets), max(flatten(facets)) - min(flatten(facets)) + 1])
+
     for idx, facet in enumerate(facets):
         for vid in facet:
-            g[idx][vid] = 1
-
-    plt.figure(figsize=(16, 12), dpi=300)
+            if idx <= limit_sizes - 1 and vid <= limit_degs - 1:
+                g[idx][vid] = 1
 
     plt.imshow(g, cmap='Greys', interpolation='nearest')
     plt.xlabel("Vertex index")
     plt.ylabel("Facet index")
+
+    ax.tick_params(axis="y", direction="in", length=8)
+    ax.tick_params(axis="x", direction="in", length=8)
+    rc('xtick', labelsize=20)
+    rc('ytick', labelsize=20)
+
+    font = {'family': 'Sans',
+            'weight': 'normal',
+            'size': 22}
+
+    rc('font', **font)
 
     if output is not None:
         plt.savefig(output, dpi=dpi, transparent=True)

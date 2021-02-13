@@ -32,6 +32,7 @@ from simplicial_test.Test import *
 from simplicial_test.utils import *
 from simplicial_test.enumeration import *
 from simplicial_test.sample import *
+from simplicial_test.cm_count import *
 
 __package__ = 'simplicial_test'
 __title__ = 'simplicial_test: a recursive, deterministic algorithm to check whether a joint sequence of ' \
@@ -43,8 +44,8 @@ __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '0.90.0'
-__release__ = '0.90.0'
+__version__ = '0.91.0'
+__release__ = '0.91.0'
 
 #  mark the class as not to be collected as pytest tests
 Test.__test__ = False
@@ -57,10 +58,10 @@ __all__ = [
     "compute_joint_seq",
     "flatten",
     "compute_dpv",
-    "get_remaining_slots",
     "get_partition",
     "sort_facets",
     "get_relabeled_facets",
+    "compute_entropy",
     "groupby_vtx_symm_class",
     "if_facets_simplicial",
     "gen_joint_sequence_from_sizes",
