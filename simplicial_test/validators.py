@@ -1,3 +1,23 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# simplicial_test -- a python module to verify simplicial sequences
+#
+# Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 from simplicial_test.utils import *
 
 
@@ -21,17 +41,12 @@ def get_wanting_slots(degs, facet):
 
 def validate_data(sorted_d, sorted_s):
     m = len(sorted_s)
-    # n = len(sorted_d)
     if len(sorted_d) > 0 and np.max(sorted_d) > m:
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False
     if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
-    # if n < m:
-    #     return is_bigraphical(sorted_d, sorted_s)
-    # else:
-    #     return is_bigraphical(sorted_s, sorted_d)
     return True
 
 
@@ -40,7 +55,7 @@ def simple_validate(degs, sizes, facet, enumeration=False):
     wanting_degs, non_shielding = get_wanting_slots(degs, facet)  # wanting_degs (non_shielding & shielding)
     if enumeration:
         if min(wanting_degs) < 0:
-            return False, "added in Jan 14"
+            return False, "Rejected b/c added in min(wanting_degs) < 0"
     if len(sizes) == 0:
         return True, "Last facet explored."
     if len(sizes) == 1:
@@ -52,13 +67,13 @@ def simple_validate(degs, sizes, facet, enumeration=False):
         return False, "Some degrees require more facets than the actual remaining number."
 
     if np.count_nonzero(wanting_degs) < sizes[0]:  # useful
-        return False, "5"
+        return False, "Rejected b/c np.count_nonzero(wanting_degs) < sizes[0]."
     elif np.count_nonzero(wanting_degs) == sizes[0]:
         if np.sum(wanting_degs) > np.count_nonzero(wanting_degs):
-            return False, "4"
+            return False, "Rejected b/c np.sum(wanting_degs) > np.count_nonzero(wanting_degs)."
     if np.min(non_shielding) >= 0:
         if validate_nonshielding(sizes, wanting_degs, non_shielding):  # useful
-            return False, "6"
+            return False, "Rejected while validating non_shielding vertices."
 
     return wanting_degs, sizes, current_facets
 
@@ -157,37 +172,3 @@ def validate_issubset_blocked_sets(candidate_facet, blocked_sets=None):
             if set(candidate_facet).issubset(set(facet)):
                 return True
     return False
-
-# def is_bigraphical(degs_1, degs_2):
-#     """
-#     Based on https://github.com/szhorvat/igraph/blob/6264a1bf0c3e6881413f140ec817b6c1e6310d9f/src/graphicality.c#L740.
-#
-#     Parameters
-#     ----------
-#     degs_1: the shorter vector
-#     degs_2
-#
-#     Returns
-#     -------
-#
-#     """
-#     n_1 = len(degs_1)
-#     n_2 = len(degs_2)
-#     res = True
-#     lhs_sum = 0
-#     partial_rhs_sum = 0
-#     i = 0
-#     for k in np.arange(0, n_1, 1):
-#         lhs_sum += degs_1[k]
-#         if k < n_1 - 1 and degs_1[k] == degs_1[k+1]:
-#             continue
-#
-#         while i < n_2 and degs_2[i] <= k + 1:
-#             partial_rhs_sum += degs_2[i]
-#             i += 1
-#
-#         if lhs_sum > partial_rhs_sum + (n_2 - i) * (k + 1):
-#             res = False
-#             break
-#
-#     return res

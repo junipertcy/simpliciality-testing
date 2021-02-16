@@ -1,8 +1,29 @@
-from simplicial_test import validators
-from simplicial_test.utils import *
-from itertools import combinations
-from simplicial_test.enumeration import sort_facets
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# simplicial_test -- a python module to verify simplicial sequences
+#
+# Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+from . import validators
+from . enumeration import sort_facets
+from . utils import *
+from . custom_exceptions import *
 from functools import partial
+from itertools import combinations
 
 import sys
 
@@ -10,7 +31,7 @@ sys.setrecursionlimit(10 ** 6)
 
 
 class Test(SimplexRegistrar):
-    """Base class for SimplicialCheck.
+    r"""Base class for SimplicialCheck.
 
     Parameters
     ----------
@@ -80,21 +101,40 @@ class Test(SimplexRegistrar):
         return facets
 
     def get_distinct_selection(self, size):
-        vsc = defaultdict(list)
-        blocked_sets = deepcopy(self.blocked_sets)
+        r"""Select N=size vertices as the candidate facet.
+
+        Parameters
+        ----------
+        size : ``int``
+            Number of vertices to make the facet.
+
+        Returns
+        -------
+        facet : ``tuple``
+            The candidate facet.
+
+        Notes
+        -----
+
+        Note that _ = vtx degree at original view, vid = vtx index at original view,
+        level_map[vid] =  vtx index at current view.
+
+        """
+        equiv2vid = defaultdict(list)
+        blocked_sets = [_ for _ in self.blocked_sets if len(_) >= size]
         level_map = self.level_map[self._level - 1]
-        for idx, _ in enumerate(self.level_map[-1]):
-            if level_map[idx] is not None and self.DEGREE_LIST[level_map[idx]] != 0:
-                key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[idx]) + [_])
-                vsc[key] += [level_map[idx]]
-                vsc["pool"] += [key]
-        gen_pool = combinations(vsc["pool"], size)
+        for vid, _ in enumerate(self.level_map[-1]):
+            if level_map[vid] != -1:
+                key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
+                equiv2vid[key] += [level_map[vid]]
+                equiv2vid["pool"] += [key]
+        equiv_class_pool = combinations(equiv2vid["pool"], size)
         while True:
             facet = []
             tracker = defaultdict(int)
-            for symm_class in next(gen_pool):
-                facet += [vsc[symm_class][tracker[symm_class]]]
-                tracker[symm_class] += 1
+            for equiv_class in next(equiv_class_pool):
+                facet += [equiv2vid[equiv_class][tracker[equiv_class]]]  # vids_same_equiv_class[tracker[equiv_class]]
+                tracker[equiv_class] += 1
             yield tuple(facet)
 
     def sample_simplex_greedy(self, size):
@@ -119,17 +159,20 @@ class Test(SimplexRegistrar):
                 self.level_map["time"][self._level - 1] += 1
 
     def validate(self, facet) -> (bool, str):
-        """
-        This function must return True in order for the candidate facet to be considered.
+        r"""This function must return True in order for the candidate facet to be considered.
 
         Parameters
         ----------
-        facet: candidate_facet
+        facet : ``tuple``
+            The candidate facet.
 
         Returns
         -------
+        NoMoreBalls :
+            if we depleted this level and wanted to go up (i.e., from `lv` to `lv - 1`).
 
-        NoMoreBalls: if we depleted this level and wanted to go up (i.e., from `lv` to `lv - 1`).
+        Notes
+        -----
 
         """
         token = validators.simple_validate(self._sorted_d, self._sorted_s, facet)
@@ -140,11 +183,11 @@ class Test(SimplexRegistrar):
         blocked_sets = self.blocked_sets
         for blocked_set in blocked_sets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):  # useful
-                return False, "The remaining facets are doomed to fail the no-inclusion constraint."
+                return False, "Rejected b/c the remaining facets are doomed to fail the no-inclusion constraint."
         if Counter(wanting_degs)[len(sizes)] != 0:
             _ = validators.validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verbose=self.verbose)
             if _[0]:  # useful
-                return False, "9"
+                return False, "Rejected while reducing the sequences"
             wanting_degs, sizes, collected_facets, exempt_vids = _[1]
             if np.sum(wanting_degs) == np.sum(sizes) == 0:
                 for collected_facet in collected_facets:

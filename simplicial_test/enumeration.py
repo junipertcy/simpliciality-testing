@@ -1,6 +1,27 @@
-from simplicial_test.utils import *
-from simplicial_test import validators
-from simplicial_test.sample import get_hitting_sets
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# simplicial_test -- a python module to verify simplicial sequences
+#
+# Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+from . utils import *
+from . import validators
+from . sample import get_hitting_sets
+from . custom_exceptions import WeCanStopSignal
 from copy import deepcopy
 from itertools import combinations_with_replacement, starmap, product
 from collections import defaultdict
