@@ -14,6 +14,7 @@ If you have any questions, please contact tzuchi.yen@colorado.edu.
 
    usage/installation
    usage/go-recursive
+   usage/baby-steps
    usage/enumerate-simplicial-complexes
 
 .. toctree::

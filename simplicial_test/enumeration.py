@@ -18,10 +18,10 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from . utils import *
+from .utils import *
 from . import validators
-from . sample import get_hitting_sets
-from . custom_exceptions import WeCanStopSignal
+from .sample import get_hitting_sets
+from .custom_exceptions import WeCanStopSignal
 from copy import deepcopy
 from itertools import combinations_with_replacement, starmap, product
 from collections import defaultdict

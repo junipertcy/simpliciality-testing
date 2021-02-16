@@ -19,9 +19,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from . import validators
-from . enumeration import sort_facets
-from . utils import *
-from . custom_exceptions import *
+from .enumeration import sort_facets
+from .utils import *
+from .custom_exceptions import *
 from functools import partial
 from itertools import combinations
 
@@ -41,19 +41,22 @@ class Test(SimplexRegistrar):
 
     """
 
-    def __init__(self, degree_list, size_list, level=0, blocked_sets=None, level_map=None,
-                 depth=1e2, width=1e2, trim_ones_first=True, verbose=False):
+    def __init__(self, degree_list, size_list, blocked_sets=None, level_map=None, verbose=False, **kwargs):
 
         super().__init__()
+        self.kwargs = kwargs.copy()
+        self.depth = kwargs.pop("depth", 1e2)
+        self.width = kwargs.pop("width", 1e2)
+        trim_ones_first = kwargs.pop("trim_ones_first", True)
+        self._level = kwargs.pop("level", 1)
+        self.kwargs["level"] = self._level + 1
+
         self.facets_to_append = []
-        if level == 0:
+        if self._level == 1:
             if trim_ones_first:
                 size_list, degree_list, num_ones = pair_one_by_one(size_list, degree_list)
                 for _ in range(num_ones):
                     self.facets_to_append += [(len(degree_list) + _,)]
-
-        self.depth = depth
-        self.width = width
 
         self.m = len(size_list)
         self.n = len(degree_list)
@@ -74,7 +77,6 @@ class Test(SimplexRegistrar):
 
         self.callback_data = dict()  # level: facets
 
-        self._level = level + 1
         self.level_map = level_map
         if self.level_map is None:
             self.level_map = defaultdict(partial(np.ndarray, max(len(degree_list), len(size_list)), int))
@@ -238,7 +240,7 @@ class Test(SimplexRegistrar):
         if _ in self.level_map["explored"][lv]:
             raise NoMoreBalls((lv, (self.level_map["time"], self.level_map["explored"])))
         self.level_map["explored"][lv] += [_]
-        st = Test(degs, sizes, level=lv, blocked_sets=blocked_sets, level_map=level_map, verbose=verbose)
+        st = Test(degs, sizes, blocked_sets=blocked_sets, level_map=level_map, verbose=verbose, **self.kwargs)
         try:
             deeper_facet_is_simplicial, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
         except NoMoreBalls as e:
@@ -251,6 +253,9 @@ class Test(SimplexRegistrar):
 
     def is_simplicial(self):
         lv = self._level
+        if np.sum(self.level_map["time"]) > self.kwargs.get("cutoff", np.infty):
+            self.level_map["time"][lv - 1] += 1
+            return False, self.__mark(False, tuple())["facets"]
         if not validators.validate_data(self._sorted_d, self._sorted_s):
             self.level_map["time"][lv - 1] += 1
             return False, self.__mark(False, tuple())["facets"]

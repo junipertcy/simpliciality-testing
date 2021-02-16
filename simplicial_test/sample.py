@@ -19,7 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import random
-from simplicial_test.utils import *
+from .utils import *
 
 try:
     from pysat.examples.hitman import Hitman

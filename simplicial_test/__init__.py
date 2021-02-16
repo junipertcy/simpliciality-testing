@@ -28,26 +28,25 @@ This module contains a greedy algorithm for checking simpliciality.
    TODO.
 
 """
-from . Test import *
-from . utils import *
-from . enumeration import *
-from . sample import *
-from . cm_count import *
-from . draw import *
-
+from .Test import *
+from .utils import *
+from .enumeration import *
+from .sample import *
+from .cm_count import *
+from .draw import *
 
 __package__ = 'simplicial_test'
 __title__ = 'simplicial_test: a recursive, deterministic algorithm to check whether a joint sequence of ' \
             'degree/size distributions is simplicial'
 __description__ = ''
 __copyright__ = 'Copyright (C) 2020-2021 Tzu-Chi Yen'
-__license__ = "GPL version 3"
+__license__ = "The GNU Lesser General Public License, version 3.0 (LGPL-3.0)"
 __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '0.91.0'
-__release__ = '0.91.0'
+__version__ = '0.92.0'
+__release__ = '0.92.0'
 
 #  mark the class as not to be collected as pytest tests
 Test.__test__ = False
