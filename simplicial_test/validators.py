@@ -21,6 +21,17 @@
 from .utils import *
 
 
+def validate_data(sorted_d, sorted_s):
+    m = len(sorted_s)
+    if len(sorted_d) > 0 and np.max(sorted_d) > m:
+        return False
+    if np.sum(sorted_d) != np.sum(sorted_s):
+        return False
+    if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
+        return False
+    return True
+
+
 def get_wanting_slots(degs, facet):
     """
     Used in the greedy case only.
@@ -39,17 +50,6 @@ def get_wanting_slots(degs, facet):
            np.array([0 if _ in set(facet) else degs[_] for _ in range(n)], dtype=np.int_)  # non_shielding
 
 
-def validate_data(sorted_d, sorted_s):
-    m = len(sorted_s)
-    if len(sorted_d) > 0 and np.max(sorted_d) > m:
-        return False
-    if np.sum(sorted_d) != np.sum(sorted_s):
-        return False
-    if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
-        return False
-    return True
-
-
 def simple_validate(degs, sizes, facet, enumeration=False):
     current_facets = [facet]
     wanting_degs, non_shielding = get_wanting_slots(degs, facet)  # wanting_degs (non_shielding & shielding)
@@ -58,7 +58,7 @@ def simple_validate(degs, sizes, facet, enumeration=False):
             return False, "Rejected b/c added in min(wanting_degs) < 0"
     if len(sizes) == 0:
         return True, "Last facet explored."
-    if len(sizes) == 1:
+    elif len(sizes) == 1:
         for _ in current_facets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(_)):
                 return False, "Second last facet explored. " \
@@ -172,3 +172,45 @@ def validate_issubset_blocked_sets(candidate_facet, blocked_sets=None):
             if set(candidate_facet).issubset(set(facet)):
                 return True
     return False
+
+
+def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_filled_vids, exempt_vids=None):
+    """
+    TODO: this function can be further simplified, along with the function::validate_reduced_seq
+    The function works when one have "must_be_filled_vids" -- it goes by searching already existing facets,
+    And find out the slots that must not be chosen in order to avoid clashes.
+
+    Parameters
+    ----------
+    wanting_degs
+    curent_sizes
+    current_facets
+    exempt_vids
+
+    Returns
+    -------
+
+    """
+    if exempt_vids is None:
+        exempt_vids = []
+    shielding_facets = []
+    # if a facet contains these must_be_filled_vids (or 'mbfv')
+    mbfv = set(must_be_filled_vids).union(set(exempt_vids))
+    for facet in current_facets:  # for all existing facets
+        if mbfv.issubset(set(facet)):
+            shielding_facets += [facet]
+    for facet in blocked_sets:  # for all existing facets
+        if mbfv.issubset(set(facet)):
+            shielding_facets += [facet]
+    return shielding_facets  # then we must avoid the slots in these shielding_facets
+
+
+def get_nonshielding_vids(n, shielding_facets):
+    nonshielding_vids = set()
+    for facet in shielding_facets:
+        non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
+        if len(nonshielding_vids) == 0:
+            nonshielding_vids = non_shielding_part
+        else:
+            nonshielding_vids.intersection_update(non_shielding_part)
+    return nonshielding_vids

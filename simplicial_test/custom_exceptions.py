@@ -32,7 +32,7 @@ class NoSlotError(Exception):
             return 'NoSlotError has been raised'
 
 
-class WeCanStopSignal(Exception):
+class SimplicialSignal(Exception):
     def __init__(self, *args):
         if args:
             self.message = args[0]
@@ -41,9 +41,23 @@ class WeCanStopSignal(Exception):
 
     def __str__(self):
         if self.message:
-            return f'WeCanStopSignal {self.message}'
+            return f'SimplicialSignal {self.message}'
         else:
-            return 'WeCanStopSignal has been raised'
+            return 'SimplicialSignal has been raised'
+
+
+class NonSimplicialSignal(Exception):
+    def __init__(self, *args):
+        if args:
+            self.message = args[0]
+        else:
+            self.message = None
+
+    def __str__(self):
+        if self.message:
+            return f'NonSimplicialSignal {self.message}'
+        else:
+            return 'NonSimplicialSignal has been raised'
 
 
 class NoMoreBalls(Exception):

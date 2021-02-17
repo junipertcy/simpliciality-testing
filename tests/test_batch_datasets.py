@@ -6,7 +6,7 @@ many_small_cases = pickle.load(open("datasets/multiple_small_test_cases.pickle",
 
 def test_batch_dataset():
     for degs, sizes in many_small_cases:
-        st = Test(degs, sizes, verbose=False)
+        st = Test(degs, sizes)
         is_simplicial, facets = st.is_simplicial()
         assert is_simplicial is True
         joint_seqs = compute_joint_seq(facets)

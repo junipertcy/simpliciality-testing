@@ -21,7 +21,7 @@
 from .utils import *
 from . import validators
 from .sample import get_hitting_sets
-from .custom_exceptions import WeCanStopSignal
+from .custom_exceptions import SimplicialSignal
 from copy import deepcopy
 from itertools import combinations_with_replacement, starmap, product
 from collections import defaultdict
@@ -33,6 +33,27 @@ def sort_facets(facets):
         sorted_facets += [tuple(sorted(facet, reverse=False))]
     sorted_facets = set(sorted_facets)
     return tuple(sorted(sorted_facets, key=lambda _: [-len(_)] + list(_)))
+
+
+def compute_dpv(facets, n=None, is_sorted=True):
+    if n is None:
+        dpv = defaultdict(int)
+    else:
+        dpv = np.zeros([n], dtype=np.int_)
+
+    for facet in facets:
+        for vid in facet:
+            dpv[vid] += 1
+    if n is not None:
+        return dpv
+
+    if is_sorted:
+        return tuple(sorted(list(dpv.values()), reverse=True))
+    else:
+        _dpv = []
+        for _ in range(len(dpv.keys())):
+            _dpv += [dpv[_]]
+        return tuple(_dpv)
 
 
 def get_relabeled_facets(facets):
@@ -55,6 +76,13 @@ def get_relabeled_facets(facets):
             _facet += [old2new[vtx]]
         new_facets += [tuple(sorted(_facet))]
     return sort_facets(new_facets)
+
+
+def groupby_vtx_equiv_class(d_input):
+    res = {}
+    for i, v in d_input.items():
+        res[v] = [i] if v not in res.keys() else res[v] + [i]
+    return res
 
 
 class EnumRegistrar(object):
@@ -134,7 +162,7 @@ class EnumRegistrar(object):
 
         if fid not in self.states:
             vpf = self.compute_vpf(facets)
-            vsc = groupby_vtx_symm_class(self.dict2tuple(vpf))
+            vsc = groupby_vtx_equiv_class(self.dict2tuple(vpf))
             self.states[fid] = {
                 "m": len(facets),
                 "dpv": dpv,
@@ -181,7 +209,7 @@ class EnumRegistrar(object):
                 return
             self.size_seq = np.array(self.size_seq, dtype=np.int_)
             token = validators.simple_validate(
-                self.deg_seq, self.size_seq[len(facets):], facets, facet, enumeration=True
+                self.deg_seq, self.size_seq[len(facets):], facet, enumeration=True
             )
             if token[0] is False:
                 return
@@ -203,7 +231,7 @@ class EnumRegistrar(object):
         dpv = compute_dpv(relabeled_facets, is_sorted=True)
         if self.deg_seq is not None and dpv == tuple(self.deg_seq):
             print(f"WeCanStopSignal:{dpv} == {self.deg_seq}")
-            raise WeCanStopSignal
+            raise SimplicialSignal
 
 
 class Enum(EnumRegistrar):
@@ -390,7 +418,7 @@ class Enum(EnumRegistrar):
                         else:
                             self.fill_w_creating_new_vertices(next_size, facets, ns_vtx)
                     idx += 1
-        except WeCanStopSignal:
+        except SimplicialSignal:
             return
 
     def traceback(self, p):

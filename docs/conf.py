@@ -13,7 +13,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('..'))
 
 from recommonmark.parser import CommonMarkParser
 
@@ -143,8 +143,7 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
                        'numpy': ('https://docs.scipy.org/doc/numpy', None),
                        'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
                        'matplotlib': ('https://matplotlib.org', None),
-                       'ipython': ('https://ipython.org/ipython-doc/stable/', None),
-                       'graph_tool': ('https://graph-tool.skewed.de/static/doc/', None)}
+                       'ipython': ('https://ipython.org/ipython-doc/stable/', None)}
 
 extlinks_fancy = {'doi': (['https://dx.doi.org/{0}',
                            'https://sci-hub.tw/{0}'],

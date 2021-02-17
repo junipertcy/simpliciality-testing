@@ -23,6 +23,30 @@ from collections import defaultdict, Counter
 from copy import deepcopy
 
 
+class SimplexRegistrar(object):
+    def __init__(self):
+        self.pointer = 0
+        self.name2id = dict()
+        self.id2name = dict()
+        self.facet_size_per_id = np.array([], dtype=np.int_)
+        self.logbook = dict()
+
+    def register(self, name) -> (tuple, int):
+        name = tuple(sorted(name, reverse=True))
+        if name not in self.name2id:
+            self.name2id[name] = self.pointer
+            self.id2name[self.pointer] = name
+            self.pointer += 1
+            self.facet_size_per_id = np.append(self.facet_size_per_id, [len(name)])
+        return name, self.name2id[name]
+
+    def log_forbidden(self, name, reason) -> None:
+        self.logbook[tuple(name)] = {
+            "is_simplicial": False,
+            "reason": reason
+        }
+
+
 def compute_level_map(level_map, level, mapping2shrinked):
     n = len(level_map[-1])
     if level > 1:
@@ -76,71 +100,12 @@ def simplify_blocked_sets(bsets):
     return data
 
 
-def compute_dpv(facets, n=None, is_sorted=True):
-    if n is None:
-        dpv = defaultdict(int)
-    else:
-        dpv = np.zeros([n], dtype=np.int_)
-
-    for facet in facets:
-        for vid in facet:
-            dpv[vid] += 1
-    if n is not None:
-        return dpv
-
-    if is_sorted:
-        return tuple(sorted(list(dpv.values()), reverse=True))
-    else:
-        _dpv = []
-        for _ in range(len(dpv.keys())):
-            _dpv += [dpv[_]]
-        return tuple(_dpv)
-
-
-def groupby_vtx_symm_class(d_input):
-    res = {}
-    for i, v in d_input.items():
-        res[v] = [i] if v not in res.keys() else res[v] + [i]
-    return res
-
-
 def get_indices_of_k_in_blocked_sets(blocked_sets, k):
     indices = []
     for idx, _ in enumerate(blocked_sets):
         if k in _:
             indices += [idx]
     return indices
-
-
-class SimplexRegistrar(object):
-    def __init__(self):
-        self.pointer = 0
-        self.name2id = dict()
-        self.id2name = dict()
-        self.facet_size_per_id = np.array([], dtype=np.int_)
-        self.logbook = dict()
-
-    def register(self, name) -> (tuple, int):
-        name = tuple(sorted(name, reverse=True))
-        if name not in self.name2id:
-            self.name2id[name] = self.pointer
-            self.id2name[self.pointer] = name
-            self.pointer += 1
-            self.facet_size_per_id = np.append(self.facet_size_per_id, [len(name)])
-        return name, self.name2id[name]
-
-    def log_forbidden(self, name, reason_id) -> None:
-        self.logbook[tuple(name)] = {
-            "is_simplicial": False,
-            "reason": reason_id
-        }
-
-
-def update_deg_seq(deg_seq, facet, value):
-    if value not in [+1, -1]:
-        raise NotImplementedError
-    for _ in facet:
-        deg_seq[_] += value
 
 
 def shrink_facets(facets, inv_map):
@@ -156,61 +121,6 @@ def shrink_facets(facets, inv_map):
             _facets += [sorted(transformed_facet)]
     _facets.sort(key=len)
     return _facets
-
-
-def shrink_degs(degs, inv_map):
-    d = dict()
-    for idx, _degs in enumerate(degs):
-        try:
-            d[inv_map[idx]] = _degs
-        except KeyError:
-            pass
-    d_list = list()
-    for idx, _d in enumerate(d.values()):
-        d_list += [d[idx]]
-    return np.array(d_list, dtype=np.int_)
-
-
-def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_filled_vids, exempt_vids=None):
-    """
-    TODO: this function can be further simplified, along with the function::validate_reduced_seq
-    The function works when one have "must_be_filled_vids" -- it goes by searching already existing facets,
-    And find out the slots that must not be chosen in order to avoid clashes.
-
-    Parameters
-    ----------
-    wanting_degs
-    curent_sizes
-    current_facets
-    exempt_vids
-
-    Returns
-    -------
-
-    """
-    if exempt_vids is None:
-        exempt_vids = []
-    shielding_facets = []
-    # if a facet contains these must_be_filled_vids (or 'mbfv')
-    mbfv = set(must_be_filled_vids).union(set(exempt_vids))
-    for facet in current_facets:  # for all existing facets
-        if mbfv.issubset(set(facet)):
-            shielding_facets += [facet]
-    for facet in blocked_sets:  # for all existing facets
-        if mbfv.issubset(set(facet)):
-            shielding_facets += [facet]
-    return shielding_facets  # then we must avoid the slots in these shielding_facets
-
-
-def get_nonshielding_vids(n, shielding_facets):
-    nonshielding_vids = set()
-    for facet in shielding_facets:
-        non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
-        if len(nonshielding_vids) == 0:
-            nonshielding_vids = non_shielding_part
-        else:
-            nonshielding_vids.intersection_update(non_shielding_part)
-    return nonshielding_vids
 
 
 def basic_validations_degs_and_sizes(degs, sizes):
@@ -251,41 +161,6 @@ def pair_one_by_one(size_list, degree_list) -> (list, list):
         size_list.remove(1)
         degree_list.remove(1)
     return size_list, degree_list, _
-
-
-def get_slimmest_d(s):
-    """
-
-    Parameters
-    ----------
-    s: size list
-
-    Returns
-    -------
-
-    """
-    s = sorted(s)
-    pool = set()
-    tentative_ = []
-    for _s in s:
-        tentative = tentative_
-        if len(tentative) == 0:
-            idx = 0
-            for _ in range(_s):
-                tentative += [idx]
-                idx += 1
-            pool.add(tuple(tentative))
-            tentative_ = tentative
-            continue
-        tentative[-1] += 1
-        idx = tentative[-1]
-        for _ in range(_s - len(tentative)):
-            idx += 1
-            tentative += [idx]
-
-        pool.add(tuple(tentative))
-        tentative_ = tentative
-    return sorted(Counter(flatten(pool)).values(), reverse=True)
 
 
 def sort_helper(st) -> list:
@@ -350,6 +225,26 @@ def get_seq2seq_mapping(degs):
     return mapping2shrinked, mapping2enlarged
 
 
+def filter_blocked_facets(blocked_facets, exempt_vids):
+    r"""Supposedly every existing facet will block potential facets in the next level; however, this only applies if
+    it contains `exempt_vids` because these vertices will be shared by next-level candidates.
+
+    Parameters
+    ----------
+    blocked_facets
+    exempt_vids
+
+    Returns
+    -------
+
+    """
+    filtered = []
+    for facet in blocked_facets:
+        if set(exempt_vids).issubset(facet):
+            filtered += [facet]
+    return filtered
+
+
 def compute_joint_seq(facets) -> (list, list):
     if len(facets) == 0:
         raise ValueError("Empty input facets. Are you sure the input is correct?")
@@ -373,42 +268,6 @@ def if_facets_simplicial(facets) -> bool:
                 if set(list(facet1)).issubset(set(list(facet2))):
                     return False
     return True
-
-
-def filter_blocked_facets(blocked_facets, exempt_vids):
-    """
-
-    Supposedly every existing facet will block potential facets in the next level, however, this only applies if
-    it contains `exempt_vids` because these vertices will be shared by next-level candidates.
-
-    Parameters
-    ----------
-    blocked_facets
-    exempt_vids
-
-    Returns
-    -------
-
-    """
-    # print(f"in filter_blocked_facets (blocked_facets, exempt_vids) = {(blocked_facets, exempt_vids)}")
-    filtered = []
-    for facet in blocked_facets:
-        if set(exempt_vids).issubset(facet):
-            filtered += [facet]
-    return filtered
-
-
-def compute_joint_seq_from_facets(facets):
-    n = max(flatten(facets)) + 1
-    degs = np.zeros(n, dtype=np.int_)
-    sizes = np.zeros(len(facets), dtype=np.int_)
-
-    for idx, facet in enumerate(facets):
-        for vid in facet:
-            degs[vid] += 1
-        sizes[idx] = len(facet)
-
-    return degs, sizes
 
 
 def accel_asc(n):
@@ -448,3 +307,56 @@ def get_partition(n=1, sortby="asc"):
     else:
         return sorted(partitions, key=lambda x: max(x) - len(x), reverse=True)
         # return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)
+
+# def get_slimmest_d(s):
+#     """
+#
+#     Parameters
+#     ----------
+#     s: size list
+#
+#     Returns
+#     -------
+#
+#     """
+#     s = sorted(s)
+#     pool = set()
+#     tentative_ = []
+#     for _s in s:
+#         tentative = tentative_
+#         if len(tentative) == 0:
+#             idx = 0
+#             for _ in range(_s):
+#                 tentative += [idx]
+#                 idx += 1
+#             pool.add(tuple(tentative))
+#             tentative_ = tentative
+#             continue
+#         tentative[-1] += 1
+#         idx = tentative[-1]
+#         for _ in range(_s - len(tentative)):
+#             idx += 1
+#             tentative += [idx]
+#
+#         pool.add(tuple(tentative))
+#         tentative_ = tentative
+#     return sorted(Counter(flatten(pool)).values(), reverse=True)
+
+# def update_deg_seq(deg_seq, facet, value):
+#     if value not in [+1, -1]:
+#         raise NotImplementedError
+#     for _ in facet:
+#         deg_seq[_] += value
+
+
+# def shrink_degs(degs, inv_map):
+#     d = dict()
+#     for idx, _degs in enumerate(degs):
+#         try:
+#             d[inv_map[idx]] = _degs
+#         except KeyError:
+#             pass
+#     d_list = list()
+#     for idx, _d in enumerate(d.values()):
+#         d_list += [d[idx]]
+#     return np.array(d_list, dtype=np.int_)

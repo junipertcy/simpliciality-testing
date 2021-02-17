@@ -28,17 +28,16 @@ If you have any questions, please contact tzuchi.yen@colorado.edu.
    :maxdepth: 1
    :caption: Module documentation
 
-   src/Test
+   src/test
+   src/sample
    src/enumeration
+   src/draw
+
 
 Acknowledgements
 ----------------
 The `simplicialTest` is inspired and supported by the following great humans,
 `Josh Grochow`_, `Jean-Gabriel Young`_, and `Alice Patania`_.
-
-
-
-
 
 
 .. _`Josh Grochow`: https://www.cs.colorado.edu/~jgrochow/index.html

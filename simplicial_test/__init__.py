@@ -40,7 +40,7 @@ __title__ = 'simplicial_test: a recursive, deterministic algorithm to check whet
             'degree/size distributions is simplicial'
 __description__ = ''
 __copyright__ = 'Copyright (C) 2020-2021 Tzu-Chi Yen'
-__license__ = "The GNU Lesser General Public License, version 3.0 (LGPL-3.0)"
+__license__ = "LGPL version 3 or above"
 __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
@@ -63,7 +63,6 @@ __all__ = [
     "sort_facets",
     "get_relabeled_facets",
     "compute_entropy",
-    "groupby_vtx_symm_class",
     "if_facets_simplicial",
     "gen_joint_sequence_from_sizes",
     "accel_asc",
