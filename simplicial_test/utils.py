@@ -19,8 +19,52 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+from dataclasses import dataclass, field
+from .custom_exceptions import NonSimplicialSignal
 from collections import defaultdict, Counter
 from copy import deepcopy
+from functools import partial
+
+
+@dataclass
+class SimplicialDepot:
+    degree_list: np.ndarray
+    size_list: np.ndarray
+    conv_time: int = field(repr=False, default=0)
+    cutoff: int = field(repr=False, init=False)
+
+    def __post_init__(self):
+        self.explored = defaultdict(list)
+        self.time = np.zeros(max(len(self.degree_list), len(self.size_list)) + 1, np.int_)
+        self.level_map = defaultdict(partial(np.ndarray, max(len(self.degree_list), len(self.size_list)), int))
+        self.level_map[1].fill(-1)
+        for ind, _ in enumerate(self.degree_list):
+            self.level_map[0][ind] = ind
+
+    def compute_level_map(self, level, mapping2shrinked):
+        n = len(self.degree_list)
+        if level > 1:
+            for _ in range(n):
+                vtx_current_view = self.level_map[level - 1][_]
+                if vtx_current_view == -1:
+                    self.level_map[level][_] = -1
+                    continue
+                try:
+                    self.level_map[level][_] = mapping2shrinked[vtx_current_view]
+                except KeyError:
+                    self.level_map[level][_] = -1
+        else:
+            for _ in range(n):
+                try:
+                    self.level_map[1][_] = mapping2shrinked[_]
+                except KeyError:
+                    self.level_map[1][_] = -1
+
+    def add_to_time_counter(self, level):
+        self.time[level] += 1
+        self.conv_time += 1
+        if self.conv_time >= self.cutoff:
+            raise NonSimplicialSignal
 
 
 class SimplexRegistrar(object):
@@ -45,27 +89,6 @@ class SimplexRegistrar(object):
             "is_simplicial": False,
             "reason": reason
         }
-
-
-def compute_level_map(level_map, level, mapping2shrinked):
-    n = len(level_map[-1])
-    if level > 1:
-        for _ in range(n):
-            vtx_current_view = level_map[level - 1][_]
-            if vtx_current_view == -1:
-                level_map[level][_] = -1
-                continue
-            try:
-                level_map[level][_] = mapping2shrinked[vtx_current_view]
-            except KeyError:
-                level_map[level][_] = -1
-    else:
-        for _ in range(n):
-            try:
-                level_map[1][_] = mapping2shrinked[_]
-            except KeyError:
-                level_map[1][_] = -1
-    return level_map
 
 
 def flatten(nested_list):

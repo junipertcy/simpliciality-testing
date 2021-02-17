@@ -21,8 +21,7 @@
 from . import validators
 from .enumeration import sort_facets
 from .utils import *
-from .custom_exceptions import *
-from functools import partial
+from .custom_exceptions import NoMoreBalls, SimplicialSignal
 from itertools import combinations
 
 import sys
@@ -88,7 +87,9 @@ class Test(SimplexRegistrar):
         else:
             self.blocked_sets = simplify_blocked_sets(blocked_sets)
 
-        self.level_map = kwargs.pop("level_map", self._get_default_level_map(self.DEGREE_LIST, self.SIZE_LIST))
+        self.s_depot = kwargs.pop("s_depot", SimplicialDepot(self.DEGREE_LIST, self.SIZE_LIST))
+        self.s_depot.cutoff = kwargs.pop("cutoff", np.infty)
+
         self.verbose = verbose
         if self.verbose:
             print(f"========== (l={self._level}) ==========\n"
@@ -102,18 +103,6 @@ class Test(SimplexRegistrar):
         self.callback_data = {}  # level2facets map
         if len(kwargs) > 0:
             raise ValueError(f"unrecognized keyword arguments: {str(list(kwargs.keys()))}")
-
-
-    @staticmethod
-    def _get_default_level_map(degree_list, size_list):
-        default_level_map = defaultdict(partial(np.ndarray, max(len(degree_list), len(size_list)), int))
-        default_level_map[-1] = degree_list
-        default_level_map[1].fill(-1)
-        default_level_map["time"].fill(0)
-        default_level_map["explored"] = defaultdict(list)
-        for ind, _ in enumerate(degree_list):
-            default_level_map[0][ind] = ind
-        return default_level_map
 
     def identifier2facets(self):
         facets = []
@@ -143,8 +132,8 @@ class Test(SimplexRegistrar):
         """
         equiv2vid = defaultdict(list)
         blocked_sets = [_ for _ in self.blocked_sets if len(_) >= size]
-        level_map = self.level_map[self._level - 1]
-        for vid, _ in enumerate(self.level_map[-1]):
+        level_map = self.s_depot.level_map[self._level - 1]
+        for vid, _ in enumerate(self.s_depot.degree_list):
             if level_map[vid] != -1:
                 key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
                 equiv2vid[key] += [level_map[vid]]
@@ -164,7 +153,7 @@ class Test(SimplexRegistrar):
             try:
                 facet = next(valid_trials)  # candidate_facet
             except RuntimeError:
-                self.level_map["time"][self._level - 1] += 1
+                self.s_depot.add_to_time_counter(self._level)
                 raise NoMoreBalls(
                     "May not be solvable with the greedy algorithm OR the recursive_is_simplicial must return False.")
             # Note that self.blocked_sets are passed from a higher level,
@@ -177,7 +166,7 @@ class Test(SimplexRegistrar):
                 self.current_fids += [picked_facet_id]
                 return picked_facet
             else:
-                self.level_map["time"][self._level - 1] += 1
+                self.s_depot.add_to_time_counter(self._level)
 
     def validate(self, facet) -> (bool, str):
         r"""This function must return True in order for the candidate facet to be considered.
@@ -238,10 +227,10 @@ class Test(SimplexRegistrar):
                 wanting_degs, sizes, mapping2shrinked, mapping2enlarged, blocked_sets=blocked_sets
             )
         except NoMoreBalls as e:
-            lv, (self.level_map["time"], self.level_map["explored"]) = e.message
-            self.level_map["time"][self._level - 1] += 1
+            lv, (self.s_depot.time, self.s_depot.explored) = e.message
+            self.s_depot.add_to_time_counter(self._level)
             if int(lv) <= self.depth:
-                if self.level_map["time"][self._level - 1] > self.width:
+                if self.s_depot.time[self._level] > self.width:
                     raise NoMoreBalls
                 # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
                 return False, "keep looking for balls!"
@@ -254,18 +243,18 @@ class Test(SimplexRegistrar):
             self.callback_data[self._level] = current_facets + facets + collected_facets
             raise SimplicialSignal
         else:
-            self.level_map["time"][self._level - 1] += 1
+            self.s_depot.add_to_time_counter(self._level)
             return False, "No valid facet found at a higher level."
 
     def _is_simplicial(self, degs, sizes, mapping2shrinked, mapping2enlarged, blocked_sets=None) -> (bool, list):
         lv = self._level
-        self.level_map = compute_level_map(self.level_map, lv, mapping2shrinked)
+        self.s_depot.compute_level_map(lv, mapping2shrinked)
         blocked_sets = sort_facets(blocked_sets)
         _ = (tuple(sorted(degs, reverse=True)), tuple(blocked_sets))
-        if _ in self.level_map["explored"][lv]:
-            raise NoMoreBalls((lv, (self.level_map["time"], self.level_map["explored"])))
-        self.level_map["explored"][lv] += [_]
-        self.kwargs["level_map"] = self.level_map
+        if _ in self.s_depot.explored[lv]:
+            raise NoMoreBalls((lv, (self.s_depot.time, self.s_depot.explored)))
+        self.s_depot.explored[lv] += [_]
+        self.kwargs["s_depot"] = self.s_depot
         st = Test(degs, sizes, blocked_sets=blocked_sets, verbose=self.verbose, **self.kwargs)
         try:
             deeper_facet_is_simplicial, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
@@ -280,13 +269,8 @@ class Test(SimplexRegistrar):
 
     def is_simplicial(self):
         lv = self._level
-        if np.sum(self.level_map["time"]) > self.kwargs.get("cutoff", np.infty):
-            self.level_map["time"][lv - 1] += 1
-            # return False, self.__mark(False, tuple())["facets"]
-            return NonSimplicialSignal
-
         if not validators.validate_data(self.DEGREE_LIST, self._mutable_size_list):
-            self.level_map["time"][lv - 1] += 1
+            self.s_depot.add_to_time_counter(self._level)
             return False, self.__mark(False, tuple())["facets"]
         else:
             if sum(self.DEGREE_LIST) == sum(self._mutable_size_list) == 0:
@@ -303,6 +287,7 @@ class Test(SimplexRegistrar):
                     facets = tuple(sort_callback(self.callback_data[lv]) + self.facets_to_append)
                     return True, self.__mark(True, facets)["facets"]
                 return True, self.callback_data
+
             s = self._mutable_size_list[0]
             self._mutable_size_list = np.delete(self._mutable_size_list, 0)
             try:
@@ -315,16 +300,16 @@ class Test(SimplexRegistrar):
             except NonSimplicialSignal:
                 if lv - 1 == 0:  # the very first level
                     return False, self.__mark(False, tuple())["facets"]
-                return NonSimplicialSignal
+                raise NonSimplicialSignal
             except NoMoreBalls:
                 if lv - 1 == 0:
                     return False, self.__mark(False, tuple())["facets"]
-                raise NoMoreBalls((self.level_map["time"], self.level_map["explored"]))
+                raise NoMoreBalls((self.s_depot.time, self.s_depot.explored))
 
     def __mark(self, simplicial, facets):
         self.summary["simplicial"] = simplicial
-        self.summary["conv_time"] = sum(self.level_map["time"])
-        self.summary["time"] = tuple(self.level_map["time"])
+        self.summary["conv_time"] = sum(self.s_depot.time)
+        self.summary["time"] = tuple(self.s_depot.time)
 
         self.summary["degs"] = tuple(self.DEGREE_LIST)
         self.summary["sizes"] = tuple(self.SIZE_LIST)

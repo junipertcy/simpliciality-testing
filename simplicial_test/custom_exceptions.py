@@ -18,19 +18,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-class NoSlotError(Exception):
-    def __init__(self, *args):
-        if args:
-            self.message = args[0]
-        else:
-            self.message = None
-
-    def __str__(self):
-        if self.message:
-            return f'NoSlotError {self.message}'
-        else:
-            return 'NoSlotError has been raised'
-
 
 class SimplicialSignal(Exception):
     def __init__(self, *args):
