@@ -104,7 +104,8 @@ class Test(SimplexRegistrar):
         if len(kwargs) > 0:
             raise ValueError(f"unrecognized keyword arguments: {str(list(kwargs.keys()))}")
 
-    def identifier2facets(self):
+    def fids2facets(self):
+        r"""Translate current selected facet ids to facets."""
         facets = []
         for _id in self.current_fids:
             facets += [self.id2name[_id]]
@@ -154,10 +155,7 @@ class Test(SimplexRegistrar):
                 facet = next(valid_trials)  # candidate_facet
             except RuntimeError:
                 self.s_depot.add_to_time_counter(self._level)
-                raise NoMoreBalls(
-                    "May not be solvable with the greedy algorithm OR the recursive_is_simplicial must return False.")
-            # Note that self.blocked_sets are passed from a higher level,
-            # whereas larger_simplices is anew for each level.
+                raise NoMoreBalls
             if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
             ind, reason = self.validate(facet)
@@ -220,23 +218,17 @@ class Test(SimplexRegistrar):
             collected_facets = []
         filtered = filter_blocked_facets(current_facets + blocked_sets, exempt_vids)
         mapping2shrinked, mapping2enlarged = get_seq2seq_mapping(wanting_degs)
-        blocked_sets = shrink_facets(filtered, mapping2shrinked)
+        blocked_sets = transform_facets(filtered, mapping2shrinked, to="l+1")
 
         try:
             deeper_facet_found, facets = self._is_simplicial(
                 wanting_degs, sizes, mapping2shrinked, mapping2enlarged, blocked_sets=blocked_sets
             )
         except NoMoreBalls as e:
-            lv, (self.s_depot.time, self.s_depot.explored) = e.message
-            self.s_depot.add_to_time_counter(self._level)
-            if int(lv) <= self.depth:
-                if self.s_depot.time[self._level] > self.width:
-                    raise NoMoreBalls
-                # keep look for solutions at this level, until get_valid_trials emits a NoMoreBalls
-                return False, "keep looking for balls!"
-            else:
-                # forget about this level
-                raise NoMoreBalls
+            self.s_depot.time, self.s_depot.explored = e.message
+            if self._level <= self.depth and self.s_depot.time[self._level] <= self.width:
+                return False, "keep looking for balls at this level!"
+            raise NoMoreBalls
 
         if deeper_facet_found:
             facets = [exempt_vids + list(s) for s in facets]
@@ -247,23 +239,19 @@ class Test(SimplexRegistrar):
             return False, "No valid facet found at a higher level."
 
     def _is_simplicial(self, degs, sizes, mapping2shrinked, mapping2enlarged, blocked_sets=None) -> (bool, list):
-        lv = self._level
-        self.s_depot.compute_level_map(lv, mapping2shrinked)
         blocked_sets = sort_facets(blocked_sets)
         _ = (tuple(sorted(degs, reverse=True)), tuple(blocked_sets))
-        if _ in self.s_depot.explored[lv]:
-            raise NoMoreBalls((lv, (self.s_depot.time, self.s_depot.explored)))
-        self.s_depot.explored[lv] += [_]
+        if _ in self.s_depot.explored[self._level]:
+            raise NoMoreBalls((self.s_depot.time, self.s_depot.explored))
+        self.s_depot.explored[self._level] += [_]
+
+        self.s_depot.compute_level_map(self._level, mapping2shrinked)
         self.kwargs["s_depot"] = self.s_depot
         st = Test(degs, sizes, blocked_sets=blocked_sets, verbose=self.verbose, **self.kwargs)
-        try:
-            deeper_facet_is_simplicial, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
-        except NoMoreBalls as e:
-            raise NoMoreBalls((lv, e.message))
-
-        if deeper_facet_is_simplicial:
+        simplicial_at_l_plus_one, cb_data = st.is_simplicial()  # cb_data contains facets from a deeper level
+        if simplicial_at_l_plus_one:
             # transform the facets collected from a deeper level
-            return True, get_mapped_seq(mapping2enlarged, cb_data[lv + 1])
+            return True, transform_facets(cb_data[self._level + 1], mapping2enlarged, to="l-1")
         else:
             return False, list()
 
@@ -274,35 +262,28 @@ class Test(SimplexRegistrar):
             return False, self.__mark(False, tuple())["facets"]
         else:
             if sum(self.DEGREE_LIST) == sum(self._mutable_size_list) == 0:
-                self.callback_data[lv] = self.identifier2facets()
-                if lv - 1 == 0:
-                    return True, self.__mark(True, tuple(self.facets_to_append))["facets"]
-                return True, self.callback_data
-
-        while True:
-            # Here, assuming our algorithm is all good, we want to check if we indeed find the simplicial complex
-            if len(self._mutable_size_list) == 0:
-                self.callback_data[lv] = self.identifier2facets()
-                if lv - 1 == 0:  # the very first level
+                self.callback_data[lv] = self.fids2facets()
+                if lv == 1:
                     facets = tuple(sort_callback(self.callback_data[lv]) + self.facets_to_append)
                     return True, self.__mark(True, facets)["facets"]
                 return True, self.callback_data
 
+        while True:
             s = self._mutable_size_list[0]
             self._mutable_size_list = np.delete(self._mutable_size_list, 0)
             try:
                 self.sample_simplex_greedy(s)
             except SimplicialSignal:
-                if lv - 1 == 0:  # the very first level
+                if lv == 1:
                     facets = tuple(sort_callback(self.callback_data[lv]) + self.facets_to_append)
                     return True, self.__mark(True, facets)["facets"]
                 return True, self.callback_data
             except NonSimplicialSignal:
-                if lv - 1 == 0:  # the very first level
+                if lv == 1:
                     return False, self.__mark(False, tuple())["facets"]
                 raise NonSimplicialSignal
             except NoMoreBalls:
-                if lv - 1 == 0:
+                if lv == 1:
                     return False, self.__mark(False, tuple())["facets"]
                 raise NoMoreBalls((self.s_depot.time, self.s_depot.explored))
 

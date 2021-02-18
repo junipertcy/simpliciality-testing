@@ -131,19 +131,23 @@ def get_indices_of_k_in_blocked_sets(blocked_sets, k):
     return indices
 
 
-def shrink_facets(facets, inv_map):
-    _facets = []
-    for facet in facets:
-        transformed_facet = []
-        for _ in facet:
-            try:
-                transformed_facet += [inv_map[_]]
-            except KeyError:
-                pass
-        if len(sorted(transformed_facet)) > 0:
-            _facets += [sorted(transformed_facet)]
-    _facets.sort(key=len)
-    return _facets
+def transform_facets(facets, mapping, to="l+1") -> list:
+    if to == "l-1":
+        return list(map(lambda x: tuple(map(lambda y: mapping[y], x)), facets))
+    elif to == "l+1":
+        _facets = []
+        for facet in facets:
+            transformed_facet = []
+            for vtx in facet:
+                try:
+                    transformed_facet += [mapping[vtx]]
+                except KeyError:
+                    pass
+            if len(transformed_facet) > 0:
+                _facets += [transformed_facet]
+        return _facets
+    else:
+        raise ValueError(f"data content to={to} not understood")
 
 
 def basic_validations_degs_and_sizes(degs, sizes):
@@ -206,13 +210,6 @@ def sort_helper(st) -> list:
     for facet in st.identifier2facets():
         translated += [sorted([old2new[_] for _ in facet])]
     return translated
-
-
-def get_mapped_seq(mapping2enlarged, facets) -> list:
-    # _, mapping = get_seq2seq_mapping(degs)
-    reduced_facets = list(map(lambda x: tuple(map(lambda y: mapping2enlarged[y], x)), facets))
-    # print(f"The facets above have been `enlarged` (i.e., higher-level) to: {reduced_facets}")
-    return reduced_facets
 
 
 def sort_callback(facets):

@@ -34,6 +34,7 @@ class SimplicialSignal(Exception):
 
 
 class NonSimplicialSignal(Exception):
+    r"""This token means we are simply sure that the input joint sequence is non-simplicial."""
     def __init__(self, *args):
         if args:
             self.message = args[0]
