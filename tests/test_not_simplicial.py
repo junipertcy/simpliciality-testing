@@ -27,6 +27,12 @@ def test_not_simplicial_4():
 
 def test_not_simplicial_5():
     degree_list, size_list = (
-    [6, 3, 3, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [7, 7, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1])
+        [6, 3, 3, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [7, 7, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1])
+    st = Test(degree_list, size_list)
+    assert st.is_simplicial()[0] is False
+
+
+def test_not_simplicial_unequal_seq_sum():
+    degree_list, size_list = ([3, 3, 3, 2, 1, 1], [6, 6, 2])
     st = Test(degree_list, size_list)
     assert st.is_simplicial()[0] is False

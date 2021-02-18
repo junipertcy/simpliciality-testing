@@ -103,7 +103,8 @@ html_theme_options = {
     'includehidden': True,
     'titles_only': False
 }
-
+html_logo = "assets/simplicial-test-logo.png"
+html_favicon = 'assets/simplicial-test-favicon.png'
 html_context = {
   'display_github': True,
   'github_user': 'junipertcy',
