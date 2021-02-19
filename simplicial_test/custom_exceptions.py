@@ -51,7 +51,7 @@ class NonSimplicialSignal(Exception):
 class NoMoreBalls(Exception):
     def __init__(self, *args):
         if args:
-            self.message = args[0]
+            self.message = args
         else:
             self.message = None
 
