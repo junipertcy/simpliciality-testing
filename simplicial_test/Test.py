@@ -23,6 +23,7 @@ from .enumeration import sort_facets
 from .utils import *
 from .custom_exceptions import NoMoreBalls, SimplicialSignal
 from itertools import combinations
+from copy import deepcopy
 
 import sys
 
@@ -62,8 +63,6 @@ class Test(SimplexRegistrar):
 
     def __init__(self, degree_list, size_list, blocked_sets=None, verbose=False, **kwargs):
         super().__init__()
-        if blocked_sets is None:
-            blocked_sets = list(tuple())
         self.kwargs = kwargs.copy()
         self.depth = kwargs.pop("depth", 1e2)
         self.width = kwargs.pop("width", 1e2)
@@ -255,14 +254,13 @@ class Test(SimplexRegistrar):
         if not validators.validate_data(self.DEGREE_LIST, self._mutable_size_list):
             self.s_depot.add_to_time_counter(self._level)
             return False, self.__mark(False, tuple())["facets"]
-        else:
-            if sum(self.DEGREE_LIST) == sum(self._mutable_size_list) == 0:
+
+        while True:
+            if sum(self._mutable_size_list) == 0:
                 if lv == 1:
                     facets = tuple(sort_callback(self.fids2facets()) + self.facets_to_append)
                     return True, self.__mark(True, facets)["facets"]
                 raise SimplicialSignal(self.fids2facets())
-
-        while True:
             s = self._mutable_size_list[0]
             self._mutable_size_list = np.delete(self._mutable_size_list, 0)
             try:

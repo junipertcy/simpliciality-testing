@@ -1,6 +1,39 @@
 from simplicial_test import *
 
 
+def test_all_ones_on_deg_seq():
+    size_list, degree_list = ([10], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    st = Test(degree_list, size_list)
+    is_simplicial, facets = st.is_simplicial()
+    assert is_simplicial is True
+    joint_seqs = compute_joint_seq(facets)
+    assert if_facets_simplicial(facets) is True
+    assert joint_seqs[0] == sorted(size_list, reverse=True)
+    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+
+
+def test_trim_ones_first_true():
+    size_list, degree_list = ([10, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    st = Test(degree_list, size_list, trim_ones_first=True)
+    is_simplicial, facets = st.is_simplicial()
+    assert is_simplicial is True
+    joint_seqs = compute_joint_seq(facets)
+    assert if_facets_simplicial(facets) is True
+    assert joint_seqs[0] == sorted(size_list, reverse=True)
+    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+
+
+def test_trim_ones_first_false():
+    size_list, degree_list = ([10, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    st = Test(degree_list, size_list, trim_ones_first=False)
+    is_simplicial, facets = st.is_simplicial()
+    assert is_simplicial is True
+    joint_seqs = compute_joint_seq(facets)
+    assert if_facets_simplicial(facets) is True
+    assert joint_seqs[0] == sorted(size_list, reverse=True)
+    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+
+
 def test_simplicial_1():
     size_list, degree_list = ([6, 6, 3, 3, 2], [3, 2, 2, 2, 3, 3, 2, 3])
     st = Test(degree_list, size_list)
@@ -257,3 +290,35 @@ def test_simplicial_22():
     assert if_facets_simplicial(facets) is True
     assert joint_seqs[0] == sorted(size_list, reverse=True)
     assert joint_seqs[1] == sorted(degree_list, reverse=True)
+
+
+# def test_very_time_consuming_case():
+#     r"""Plausible instance:
+#         [[0, 1, 2, 3, 4, 5, 6],
+#          [7, 8, 9, 10, 5, 3, 0],
+#          [7, 6, 0, 5, 4, 3],
+#          [7, 1, 0, 3, 5, 6],
+#          [7, 1, 4, 2, 5],
+#          [7, 1, 4, 3, 5],
+#          [7, 1, 4, 6],
+#          [7, 1, 4, 0],
+#          [7, 2, 3],
+#          [7, 2, 0],
+#          [7, 2, 6],
+#          [11, 2, 7],
+#          [8, 2],
+#          [8, 1]]
+#
+#     Notes
+#     -----
+#     This instance has st.s_depot.conv_time at roughly 123943 (~ 200 sec to compute).
+#
+#     """
+#     size_list, degree_list = ([7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2], [11, 7, 7, 6, 6, 6, 6, 5, 3, 1, 1, 1])
+#     st = Test(degree_list, size_list, width=1e4)
+#     is_simplicial, facets = st.is_simplicial()
+#     assert is_simplicial is True
+#     joint_seqs = compute_joint_seq(facets)
+#     assert if_facets_simplicial(facets) is True
+#     assert joint_seqs[0] == sorted(size_list, reverse=True)
+#     assert joint_seqs[1] == sorted(degree_list, reverse=True)

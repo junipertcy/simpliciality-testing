@@ -105,6 +105,14 @@ def validate_nonshielding(curent_sizes, wanting_degs, non_shielding):
     return False  # safe!
 
 
+def basic_validations_degs_and_sizes(degs, sizes):
+    if Counter(degs)[len(sizes)] == np.min(sizes):
+        return False
+    if len(degs) == np.max(sizes):
+        return False
+    return True
+
+
 def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verbose=False) -> (bool, tuple):
     if verbose:
         print(f"----- (BEGIN: reducing seq) -----\n"

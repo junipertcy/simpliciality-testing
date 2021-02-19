@@ -22,7 +22,6 @@ import numpy as np
 from dataclasses import dataclass, field
 from .custom_exceptions import NonSimplicialSignal
 from collections import defaultdict, Counter
-from copy import deepcopy
 from functools import partial
 
 
@@ -92,35 +91,45 @@ class SimplexRegistrar(object):
 
 
 def flatten(nested_list):
+    f"""flattens out nested lists."""
     return [item for sublist in nested_list for item in sublist]
 
 
 def simplify_blocked_sets(bsets):
-    """
-    No more inclusive blocked sets.
+    r"""No more inclusive blocked sets.
 
     Parameters
     ----------
-    bsets
+    bsets : ``iterable`` of integer-valued ``tuple`` objects
+        Facets that must be respected for non-inclusion, or "blocked sets (of facets)".
 
     Returns
     -------
+    simplified_bsets : ``list`` of integer-valued ``tuple`` objects
+        Simplified blocked sets, of which redundancy is removed.
+
+    Examples
+    --------
+    >>> bsets = ((7, 44, 109, 273), (7, 273), (44, 273), (109, 273), (2,), (4,), (44,), (56,))
+    >>> simplified_bsets = simplify_blocked_sets(bsets)
+    >>> print(simplified_bsets)
+    [(7, 44, 109, 273), (2,), (4,), (56,)]
 
     """
-    data = []
+    simplified_bsets = []
     for _bsets in sorted(bsets, key=lambda _: -len(_)):
-        if not tuple(_bsets) in data:
-            if len(data) > 0:
+        if not tuple(_bsets) in simplified_bsets:
+            if len(simplified_bsets) > 0:
                 to_add = True
-                for _ in data:
+                for _ in simplified_bsets:
                     if set(_bsets).issubset(set(_)):
                         to_add = False
                         break
                 if to_add:
-                    data += [_bsets]
+                    simplified_bsets += [_bsets]
             else:
-                data += [_bsets]
-    return data
+                simplified_bsets += [_bsets]
+    return simplified_bsets
 
 
 def get_indices_of_k_in_blocked_sets(blocked_sets, k):
@@ -150,14 +159,6 @@ def transform_facets(facets, mapping, to="l+1") -> list:
         raise ValueError(f"data content to={to} not understood")
 
 
-def basic_validations_degs_and_sizes(degs, sizes):
-    if Counter(degs)[len(sizes)] == np.min(sizes):
-        return False
-    if len(degs) == np.max(sizes):
-        return False
-    return True
-
-
 def remove_ones(sizes, wanting_degs, choose_from=None):
     removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[
                         :Counter(sizes)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
@@ -181,9 +182,7 @@ def pair_one_by_one(size_list, degree_list) -> (list, list):
     """
     size_list = list(size_list)
     degree_list = list(degree_list)
-    _1 = Counter(size_list)[1]
-    _2 = Counter(degree_list)[1]
-    _ = min(_1, _2)
+    _ = min(Counter(size_list)[1], Counter(degree_list)[1])
     for __ in range(_):
         size_list.remove(1)
         degree_list.remove(1)
