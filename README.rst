@@ -1,12 +1,12 @@
 simpliciality_test
 ==================
 
-.. image:: https://img.shields.io/badge/contact-@oneofyen-blue.svg?style=flat
-   :target: https://twitter.com/oneofyen
-   :alt: Twitter: @oneofyen
-.. image:: https://img.shields.io/badge/license-GPL-green.svg?style=flat
-   :target: https://github.com/junipertcy/simpliciality_test/blob/master/LICENSE
-   :alt: License
+.. image:: https://img.shields.io/badge/python-3-blue.svg?style=flat
+   :target: https://github.com/junipertcy/simpliciality_test/blob/master/COPYING
+   :alt: python
+.. image:: https://img.shields.io/badge/license-LGPL-green.svg?style=flat
+   :target: https://github.com/junipertcy/simpliciality_test/blob/master/COPYING
+   :alt: license
 
 
 A constructive greedy algorithm to check whether a joint sequence of degree/size distributions is simplicial.
