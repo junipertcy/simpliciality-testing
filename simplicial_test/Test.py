@@ -85,6 +85,7 @@ class Test(SimplexRegistrar):
             self.blocked_sets = []
         else:
             self.blocked_sets = simplify_blocked_sets(blocked_sets)
+            # self.blocked_sets = [_ for _ in simplify_blocked_sets(blocked_sets) if len(_) >= min(degree_list[np.nonzero(degree_list)])]
 
         self.s_depot = kwargs.pop("s_depot", SimplicialDepot(self.DEGREE_LIST, self.SIZE_LIST))
         self.s_depot.cutoff = kwargs.pop("cutoff", np.infty)

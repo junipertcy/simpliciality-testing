@@ -1,7 +1,7 @@
 simpliciality_test
 ==================
 
-.. image:: https://img.shields.io/badge/python-3-blue.svg?style=flat
+.. image:: https://img.shields.io/badge/python-3.8-blue.svg?style=flat
    :target: https://github.com/junipertcy/simpliciality_test/blob/master/COPYING
    :alt: python
 .. image:: https://img.shields.io/badge/license-LGPL-green.svg?style=flat

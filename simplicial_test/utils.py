@@ -23,12 +23,14 @@ from dataclasses import dataclass, field
 from .custom_exceptions import NonSimplicialSignal
 from collections import defaultdict, Counter
 from functools import partial
+from typing import List
 
 
 @dataclass
 class SimplicialDepot:
     degree_list: np.ndarray
     size_list: np.ndarray
+    depths: List = field(repr=False, default_factory=list)
     conv_time: int = field(repr=False, default=0)
     cutoff: int = field(repr=False, init=False)
 
@@ -62,6 +64,7 @@ class SimplicialDepot:
     def add_to_time_counter(self, level):
         self.time[level] += 1
         self.conv_time += 1
+        self.depths += [level]
         if self.conv_time >= self.cutoff:
             raise NonSimplicialSignal
 
@@ -309,6 +312,28 @@ def get_partition(n=1, sortby="asc"):
         return partitions
     else:
         return sorted(partitions, key=lambda x: max(x) - len(x), reverse=True)
+
+
+def read_hyperedge_list(path, delimiter=","):
+    with open(path, 'r') as f:
+        edge_list = set()
+        for line in f:
+            if not line.lstrip().startswith("%"):
+                e = line.strip().split(delimiter)
+                _edge_list = list()
+                for _e in e:
+                    _edge_list += [int(_e) - 1]
+                edge_list.add(tuple(_edge_list))
+        return list(edge_list)
+
+
+def write_simplicial_list(el, path):
+    with open(path, 'w') as f:
+        for _el in el:
+            for __el in _el:
+                f.write(str(__el) + " ")
+            f.write("\n")
+
         # return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)
 
 # def get_slimmest_d(s):

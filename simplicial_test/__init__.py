@@ -69,6 +69,8 @@ __all__ = [
     "NoMoreBalls",
     "draw_landscape",
     "draw_block",
+    "read_hyperedge_list",
+    "simplify_blocked_sets",
     "__author__",
     "__URL__",
     "__version__",
