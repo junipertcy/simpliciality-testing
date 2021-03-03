@@ -209,7 +209,7 @@ class EnumRegistrar(object):
                 return
             self.size_seq = np.array(self.size_seq, dtype=np.int_)
             token = validators.simple_validate(
-                self.deg_seq, self.size_seq[len(facets):], facet, enumeration=True
+                self.deg_seq, self.size_seq[len(facets):], facet,
             )
             if token[0] is False:
                 return

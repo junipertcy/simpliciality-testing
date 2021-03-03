@@ -50,12 +50,12 @@ def get_wanting_slots(degs, facet):
            np.array([0 if _ in set(facet) else degs[_] for _ in range(n)], dtype=np.int_)  # non_shielding
 
 
-def simple_validate(degs, sizes, facet, enumeration=False):
+def simple_validate(degs, sizes, facet):
     current_facets = [facet]
     wanting_degs, non_shielding = get_wanting_slots(degs, facet)  # wanting_degs (non_shielding & shielding)
-    if enumeration:
-        if min(wanting_degs) < 0:
-            return False, "Rejected b/c added in min(wanting_degs) < 0"
+    # print(f"wanting_degs = {wanting_degs}")
+    if min(wanting_degs) < 0:
+        return False, "Rejected b/c added in min(wanting_degs) < 0"
     if len(sizes) == 0:
         return True, "Last facet explored."
     elif len(sizes) == 1:
@@ -96,7 +96,7 @@ def validate_nonshielding(curent_sizes, wanting_degs, non_shielding):
     if np.sum(non_shielding) < remaining:
         return True
     elif np.sum(non_shielding) == remaining:
-        _ = curent_sizes - 1
+        _ = [dummy - 1 for dummy in curent_sizes]
         if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
             return False
         if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
@@ -123,7 +123,7 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verb
               )
     collected_facets = []
     exempt_vids = []
-    sizes = np.array(sizes, dtype=np.int_)
+    # sizes = np.array(sizes, dtype=np.int_)
     while Counter(wanting_degs)[len(sizes)] != 0:
         if len(sizes) > 1:
             if not basic_validations_degs_and_sizes(degs=wanting_degs, sizes=sizes):
@@ -133,8 +133,8 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verb
             exempt_vids += must_be_filled_vids
         else:
             break
-
-        sizes -= Counter(wanting_degs)[len(sizes)]
+        sizes = [_ - Counter(wanting_degs)[len(sizes)] for _ in sizes]
+        # sizes -= Counter(wanting_degs)[len(sizes)]
         wanting_degs[wanting_degs == len(sizes)] = 0
         if min(sizes) < 0:
             return True, tuple()
@@ -154,7 +154,8 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verb
             if not nonshielding_vids:
                 return True, tuple()
             wanting_degs, removed_sites = remove_ones(sizes, wanting_degs, choose_from=nonshielding_vids)
-            sizes = sizes[sizes != 1]
+            # sizes = sizes[sizes != 1]
+            [sizes.remove(1) for _ in range(Counter(sizes)[1])]
             collected_facets += [exempt_vids + [_] for _ in removed_sites]  # collected_facets immer from removed_sites
 
     if np.sum(wanting_degs) == np.sum(sizes) == 0:

@@ -24,23 +24,33 @@ from .custom_exceptions import NonSimplicialSignal
 from collections import defaultdict, Counter
 from functools import partial
 from typing import List
+from copy import deepcopy
 
 
-@dataclass
+@dataclass(frozen=False)
 class SimplicialDepot:
-    degree_list: np.ndarray
-    size_list: np.ndarray
+    degree_list: List
+    size_list: List
+    prev_d: dict = field(repr=False, default_factory=dict)
+    prev_s: dict = field(repr=False, default_factory=dict)
+    prev_b: dict = field(repr=False, default_factory=dict)
+    mappers: dict = field(repr=False, default_factory=dict)
+    exempts: dict = field(repr=False, default_factory=dict)
+    collects: dict = field(repr=False, default_factory=dict)
+    currents: dict = field(repr=False, default_factory=dict)
+    valid_trials: dict = field(repr=False, default_factory=dict)
     depths: List = field(repr=False, default_factory=list)
     conv_time: int = field(repr=False, default=0)
     cutoff: int = field(repr=False, init=False)
 
     def __post_init__(self):
-        self.explored = defaultdict(list)
+        self.explored = defaultdict(set)
         self.time = np.zeros(max(len(self.degree_list), len(self.size_list)) + 1, np.int_)
         self.level_map = defaultdict(partial(np.ndarray, max(len(self.degree_list), len(self.size_list)), int))
-        self.level_map[1].fill(-1)
         for ind, _ in enumerate(self.degree_list):
             self.level_map[0][ind] = ind
+            self.valid_trials[ind] = None
+        self.level_map[1].fill(-1)
 
     def compute_level_map(self, level, mapping2shrinked):
         n = len(self.degree_list)
@@ -62,9 +72,9 @@ class SimplicialDepot:
                     self.level_map[1][_] = -1
 
     def add_to_time_counter(self, level):
-        self.time[level] += 1
+        self.time[level - 1] += 1
         self.conv_time += 1
-        self.depths += [level]
+        self.depths += [level - 1]
         if self.conv_time >= self.cutoff:
             raise NonSimplicialSignal
 
@@ -183,8 +193,8 @@ def pair_one_by_one(size_list, degree_list) -> (list, list):
     -------
 
     """
-    size_list = list(size_list)
-    degree_list = list(degree_list)
+    size_list = sorted(size_list, reverse=True)
+    degree_list = sorted(degree_list, reverse=True)
     _ = min(Counter(size_list)[1], Counter(degree_list)[1])
     for __ in range(_):
         size_list.remove(1)
@@ -221,12 +231,37 @@ def sort_callback(facets):
     return t
 
 
+# def get_seq2seq_mapping(degs):
+#     mapping2enlarged = dict()
+#     nonzero_degs = np.count_nonzero(degs)
+#     argsort = np.argsort(degs)[::-1]
+#     for idx in np.arange(0, nonzero_degs, 1):
+#         mapping2enlarged[idx] = argsort[idx]
+#     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
+#     return mapping2shrinked, mapping2enlarged
+
 def get_seq2seq_mapping(degs):
+    old2new = dict()
+    for idx, _deg in enumerate(degs):
+        old2new[idx] = _deg
+    inv_old2new = defaultdict(list)
+    for key in old2new.keys():
+        if old2new[key] != 0:
+            inv_old2new[old2new[key]] += [key]
+    _idx = 0
+    _inv_old2new = deepcopy(inv_old2new)
+
+    keys = sorted(inv_old2new.keys(), reverse=True)
+    for key in keys:
+        for idx, _ in enumerate(inv_old2new[key]):
+            inv_old2new[key][idx] = _idx
+            _idx += 1
+
     mapping2enlarged = dict()
-    nonzero_degs = np.count_nonzero(degs)
-    argsort = np.argsort(degs)[::-1]
-    for idx in np.arange(0, nonzero_degs, 1):
-        mapping2enlarged[idx] = argsort[idx]
+    for key in inv_old2new.keys():
+        for idx, new_key in enumerate(inv_old2new[key]):
+            mapping2enlarged[new_key] = _inv_old2new[key][idx]
+
     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
     return mapping2shrinked, mapping2enlarged
 

@@ -21,13 +21,9 @@
 from . import validators
 from .enumeration import sort_facets
 from .utils import *
-from .custom_exceptions import NoMoreBalls, SimplicialSignal
+from .custom_exceptions import NoMoreBalls, SimplicialSignal, GoToNextLevel
 from itertools import combinations
 from copy import deepcopy
-
-import sys
-
-sys.setrecursionlimit(10 ** 6)
 
 
 class Test(SimplexRegistrar):
@@ -61,46 +57,29 @@ class Test(SimplexRegistrar):
 
     """
 
-    def __init__(self, degree_list, size_list, blocked_sets=None, verbose=False, **kwargs):
+    def __init__(self, degree_list, size_list, verbose=False, **kwargs):
         super().__init__()
-        self.kwargs = kwargs.copy()
+        self._level = 0
+        self.s_depot = kwargs.pop("s_depot", SimplicialDepot(
+            sorted(degree_list, reverse=True), sorted(size_list, reverse=True)
+        ))
+        trim_ones_first = kwargs.pop("trim_ones_first", True)
+        self.facets_to_append = []
+        if trim_ones_first:
+            self.size_list, self.degree_list, num_ones = pair_one_by_one(size_list, degree_list)
+            for _ in range(num_ones):
+                self.facets_to_append += [(len(self.degree_list) + _,)]
+        else:
+            self.degree_list = self.s_depot.degree_list
+            self.size_list = self.s_depot.size_list
+        self.blocked_sets = []
+
         self.depth = kwargs.pop("depth", 1e2)
         self.width = kwargs.pop("width", 1e2)
-        trim_ones_first = kwargs.pop("trim_ones_first", True)
-        self._level = kwargs.pop("level", 1)
-        self.kwargs["level"] = self._level + 1
-        self.facets_to_append = []
-        if self._level == 1:
-            if trim_ones_first:
-                size_list, degree_list, num_ones = pair_one_by_one(size_list, degree_list)
-                for _ in range(num_ones):
-                    self.facets_to_append += [(len(degree_list) + _,)]
-        self.m = len(size_list)
-        self.n = len(degree_list)
-        self.DEGREE_LIST = np.array(sorted(degree_list, reverse=True), dtype=np.int_)
-        self.SIZE_LIST = np.array(sorted(size_list, reverse=True), dtype=np.int_)
-        self._mutable_size_list = np.array(deepcopy(self.SIZE_LIST), dtype=np.int_)
-
-        if blocked_sets is None:
-            self.blocked_sets = []
-        else:
-            self.blocked_sets = simplify_blocked_sets(blocked_sets)
-            # self.blocked_sets = [_ for _ in simplify_blocked_sets(blocked_sets) if len(_) >= min(degree_list[np.nonzero(degree_list)])]
-
-        self.s_depot = kwargs.pop("s_depot", SimplicialDepot(self.DEGREE_LIST, self.SIZE_LIST))
         self.s_depot.cutoff = kwargs.pop("cutoff", np.infty)
-
         self.verbose = verbose
-        if self.verbose:
-            print(f"========== (l={self._level}) ==========\n"
-                  f"Size list: {self.SIZE_LIST.tolist()}\n"
-                  f"Degree list: {self.DEGREE_LIST.tolist()}\n"
-                  f"blocked_sets = {self.blocked_sets}"
-                  # f"len::blocked_sets = {list(map(lambda x: len(x), self.blocked_sets))}\n"
-                  )
         self.summary = {}
         self.current_fids = []
-        self.cb_data = None
         if len(kwargs) > 0:
             raise ValueError(f"unrecognized keyword arguments: {str(list(kwargs.keys()))}")
 
@@ -111,7 +90,8 @@ class Test(SimplexRegistrar):
             facets += [self.id2name[_id]]
         return facets
 
-    def get_distinct_selection(self, size):
+    @staticmethod
+    def get_distinct_selection(size, degs, blocked_sets, level_map):
         r"""Select a candidate facet (of size ``size``).
 
         Parameters
@@ -132,30 +112,37 @@ class Test(SimplexRegistrar):
 
         """
         equiv2vid = defaultdict(list)
-        blocked_sets = [_ for _ in self.blocked_sets if len(_) >= size]
-        level_map = self.s_depot.level_map[self._level - 1]
-        for vid, _ in enumerate(self.s_depot.degree_list):
+        blocked_sets = [_ for _ in blocked_sets if len(_) >= size]
+        for vid, _ in enumerate(degs):
             if level_map[vid] != -1:
                 key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
                 equiv2vid[key] += [level_map[vid]]
                 equiv2vid["pool"] += [key]
         equiv_class_pool = combinations(equiv2vid["pool"], size)
+        explored_set = set()
         while True:
             facet = []
             tracker = defaultdict(int)
             for equiv_class in next(equiv_class_pool):
                 facet += [equiv2vid[equiv_class][tracker[equiv_class]]]  # vids_same_equiv_class[tracker[equiv_class]]
                 tracker[equiv_class] += 1
-            yield tuple(facet)
+            if tuple(facet) not in explored_set:
+                explored_set.add(tuple(facet))
+                yield tuple(facet)
 
-    def sample_simplex_greedy(self, size):
-        valid_trials = self.get_distinct_selection(size)
+    def sample_candidate_facet(self, size, valid_trials=None):
+        if not valid_trials:
+            self.s_depot.valid_trials[self._level] = self.get_distinct_selection(
+                size, self.s_depot.prev_d[1], self.blocked_sets, self.s_depot.level_map[self._level - 1])
         while True:
             try:
-                facet = next(valid_trials)  # candidate_facet
+                facet = next(self.s_depot.valid_trials[self._level])  # candidate_facet
             except RuntimeError:
                 self.s_depot.add_to_time_counter(self._level)
-                raise NoMoreBalls
+                raise NoMoreBalls("nomore")
+            except StopIteration:
+                self.s_depot.add_to_time_counter(self._level)
+                raise NoMoreBalls("nomore")
             if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
             ind, reason = self.validate(facet)
@@ -165,6 +152,8 @@ class Test(SimplexRegistrar):
                 return picked_facet
             else:
                 self.s_depot.add_to_time_counter(self._level)
+                if reason == "explored":
+                    raise NoMoreBalls
 
     def validate(self, facet) -> (bool, str):
         r"""This function must return True in order for the candidate facet to be considered.
@@ -192,12 +181,12 @@ class Test(SimplexRegistrar):
         -----
 
         """
-        token = validators.simple_validate(self.DEGREE_LIST, self._mutable_size_list, facet)
+        token = validators.simple_validate(self.degree_list, self.size_list, facet)
         if type(token[0]) == bool:
             return token
         else:
             wanting_degs, sizes, current_facets = token
-        blocked_sets = self.blocked_sets
+        blocked_sets = simplify_blocked_sets(self.blocked_sets)
         for blocked_set in blocked_sets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):  # useful
                 return False, "Rejected b/c the remaining facets are doomed to fail the no-inclusion constraint."
@@ -209,83 +198,138 @@ class Test(SimplexRegistrar):
             if np.sum(wanting_degs) == np.sum(sizes) == 0:
                 for collected_facet in collected_facets:
                     if set(exempt_vids).issubset(collected_facet):
-                        self.cb_data = current_facets + collected_facets
-                        raise SimplicialSignal
-                self.cb_data = current_facets + [exempt_vids] + collected_facets
-                raise SimplicialSignal
+                        raise SimplicialSignal(current_facets + collected_facets)
+                raise SimplicialSignal(current_facets + [exempt_vids] + collected_facets)
         else:
             exempt_vids = []
             collected_facets = []
+
         filtered = filter_blocked_facets(current_facets + blocked_sets, exempt_vids)
-        mapping2shrinked, mapping2enlarged = get_seq2seq_mapping(wanting_degs)
-        blocked_sets = transform_facets(filtered, mapping2shrinked, to="l+1")
-
-        try:
-            self._is_simplicial(
-                wanting_degs, sizes, mapping2shrinked, blocked_sets=blocked_sets
-            )
-        except NoMoreBalls as e:
-            self.s_depot.time, self.s_depot.explored = e.message
-            if self._level <= self.depth and self.s_depot.time[self._level] <= self.width:
-                return False, "keep looking for balls at this level!"
-            raise NoMoreBalls
-        except SimplicialSignal as e:
-            facets = transform_facets(e.message, mapping2enlarged, to="l-1")
-            facets = [exempt_vids + list(s) for s in facets]
-            self.cb_data = current_facets + facets + collected_facets
-            raise SimplicialSignal
-        else:
-            self.s_depot.add_to_time_counter(self._level)
-            return False, "No valid facet found at a higher level."
-
-    def _is_simplicial(self, degs, sizes, mapping2shrinked, blocked_sets=None) -> (bool, list):
-        blocked_sets = sort_facets(blocked_sets)
-        _ = (tuple(sorted(degs, reverse=True)), tuple(blocked_sets))
+        blocked_sets = sort_facets(self.blocked_sets)
+        _ = (tuple(sorted(wanting_degs, reverse=True)), tuple(blocked_sets))
         if _ in self.s_depot.explored[self._level]:
-            raise NoMoreBalls(self.s_depot.time, self.s_depot.explored)
-        self.s_depot.explored[self._level] += [_]
+            return False, "explored"
+        self.s_depot.explored[self._level].add(_)
 
-        self.s_depot.compute_level_map(self._level, mapping2shrinked)
-        self.kwargs["s_depot"] = self.s_depot
-        st = Test(degs, sizes, blocked_sets=blocked_sets, verbose=self.verbose, **self.kwargs)
-        st.is_simplicial()
+        self.s_depot.mappers[self._level] = get_seq2seq_mapping(wanting_degs)  # (mapping2shrinked, mapping2enlarged)
+        self.s_depot.collects[self._level] = collected_facets
+        self.s_depot.exempts[self._level] = exempt_vids
+        self.s_depot.currents[self._level] = current_facets
+        blocked_sets = transform_facets(filtered, self.s_depot.mappers[self._level][0], to="l+1")
+        raise GoToNextLevel(wanting_degs, sizes, blocked_sets, self.s_depot.mappers[self._level][0])
 
     def is_simplicial(self):
-        lv = self._level
-        if not validators.validate_data(self.DEGREE_LIST, self._mutable_size_list):
-            self.s_depot.add_to_time_counter(self._level)
-            return False, self.__mark(False, tuple())["facets"]
-
+        ind = None
+        facets = None
+        anew = True
+        s = None
         while True:
-            if sum(self._mutable_size_list) == 0:
-                if lv == 1:
-                    facets = tuple(sort_callback(self.fids2facets()) + self.facets_to_append)
-                    return True, self.__mark(True, facets)["facets"]
-                raise SimplicialSignal(self.fids2facets())
-            s = self._mutable_size_list[0]
-            self._mutable_size_list = np.delete(self._mutable_size_list, 0)
+            if anew:
+                self._level += 1
+                self._verbose_logging()
+                if not validators.validate_data(self.degree_list, self.size_list):
+                    self.s_depot.add_to_time_counter(self._level - 1)
+                    if self._level != 1:
+                        anew = True
+                        self._rollback(self._level - 1)
+                        continue  # todo: unsure
+                    ind = 0
+                    break
+                self._stage_prev_state()
+                s = self.size_list.pop(0)
             try:
-                self.sample_simplex_greedy(s)
-            except SimplicialSignal:
-                if lv == 1:
-                    facets = tuple(sort_callback(self.cb_data) + self.facets_to_append)
-                    return True, self.__mark(True, facets)["facets"]
-                raise SimplicialSignal(self.cb_data)
+                self.sample_candidate_facet(s, valid_trials=self.s_depot.valid_trials[self._level])
             except NonSimplicialSignal:
-                if lv == 1:
-                    return False, self.__mark(False, tuple())["facets"]
-                raise NonSimplicialSignal
-            except NoMoreBalls:
-                if lv == 1:
-                    return False, self.__mark(False, tuple())["facets"]
-                raise NoMoreBalls(self.s_depot.time, self.s_depot.explored)
+                ind = 0
+                break
+            except SimplicialSignal as e:
+                msg = e.message
+                if self._level != 1:
+                    for lv in np.arange(self._level - 1, 0, -1):
+                        facets = transform_facets(msg, self.s_depot.mappers[lv][1], to="l-1")
+                        facets = [self.s_depot.exempts[lv] + list(s) for s in facets]
+                        msg = self.s_depot.currents[lv] + facets + self.s_depot.collects[lv]
+                facets = tuple(sort_callback(msg) + self.facets_to_append)
+                ind = 1
+                break
+            except NoMoreBalls as e:
+                if self._level == 1:
+                    ind = 0
+                    break
+                if e.message == tuple(["nomore"]):
+                    anew = True
+                    self.s_depot.valid_trials[self._level] = None
+                    self._rollback(self._level - 1)
+                    continue
+                else:
+                    if self._level <= self.depth and self.s_depot.time[self._level] <= self.width:
+                        anew = False
+                        continue
+                    anew = True
+                    self.s_depot.valid_trials[self._level] = None
+                    self._rollback(self._level - 1)
+                    continue
+            except GoToNextLevel as e:
+                degs, sizes, blocked_sets, mapping2shrinked = e.message
+                self.s_depot.compute_level_map(self._level, self.s_depot.mappers[self._level][0])
+                self.degree_list = sorted(degs, reverse=True)
+                self.size_list = sizes
+                self.blocked_sets = blocked_sets
+                anew = True
+                continue
+            else:
+                if sum(self.size_list) == 0:
+                    msg = self.fids2facets()
+                    if self._level != 1:
+                        for lv in np.arange(self._level, 0, -1):
+                            facets = transform_facets(msg, self.s_depot.mappers[lv][1], to="l-1")
+                            facets = [self.s_depot.exempts[lv - 1] + list(s) for s in facets]
+                            msg = self.s_depot.currents[lv - 1] + facets + self.s_depot.collects[lv - 1]
+                    facets = tuple(sort_callback(msg) + self.facets_to_append)
+                    ind = 1
+                    break
+                self._level -= 1
+                anew = True
+                pass
+
+        if ind == 0:
+            return False, self.__mark(False, tuple())["facets"]
+        elif ind == 1:
+            return True, self.__mark(True, facets)["facets"]
 
     def __mark(self, simplicial, facets):
         self.summary["simplicial"] = simplicial
         self.summary["conv_time"] = sum(self.s_depot.time)
         self.summary["time"] = tuple(self.s_depot.time)
-
-        self.summary["degs"] = tuple(self.DEGREE_LIST)
-        self.summary["sizes"] = tuple(self.SIZE_LIST)
+        self.summary["degs"] = tuple(self.s_depot.degree_list)
+        self.summary["sizes"] = tuple(self.s_depot.size_list)
         self.summary["facets"] = facets
         return self.summary
+
+    def _rollback(self, level):
+        self.s_depot.add_to_time_counter(self._level)
+        for _ in np.arange(self._level, level, -1):
+            self.s_depot.currents[_] = dict()
+            self.s_depot.exempts[_] = dict()
+            self.s_depot.collects[_] = dict()
+        self._level = level
+        self.size_list = self.s_depot.prev_s[self._level]
+        self.degree_list = self.s_depot.prev_d[self._level]
+        self.blocked_sets = self.s_depot.prev_b[self._level]
+        self._level -= 1
+
+    def _stage_prev_state(self):
+        self.s_depot.prev_s[self._level] = deepcopy(self.size_list)
+        self.s_depot.prev_d[self._level] = deepcopy(self.degree_list)
+        self.s_depot.prev_b[self._level] = deepcopy(self.blocked_sets)
+
+    def _verbose_logging(self):
+        if self.verbose:
+            print(f"========== (l={self._level}) ==========\n"
+                  f"Size list: {self.size_list}\n"
+                  f"Degree list: {self.degree_list}\n"
+                  f"blocked_sets = {self.blocked_sets}\n"
+                  f"currents = {self.s_depot.currents}\n"
+                  f"exempts = {self.s_depot.exempts}\n"
+                  f"collects = {self.s_depot.collects}"
+                  )

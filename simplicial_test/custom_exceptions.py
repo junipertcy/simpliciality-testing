@@ -19,6 +19,20 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
+class GoToNextLevel(Exception):
+    def __init__(self, *args):
+        if args:
+            self.message = args
+        else:
+            self.message = None
+
+    def __str__(self):
+        if self.message:
+            return f'SimplicialSignal {self.message}'
+        else:
+            return 'SimplicialSignal has been raised'
+
+
 class SimplicialSignal(Exception):
     def __init__(self, *args):
         if args:
@@ -35,6 +49,7 @@ class SimplicialSignal(Exception):
 
 class NonSimplicialSignal(Exception):
     r"""This token means we are simply sure that the input joint sequence is non-simplicial."""
+
     def __init__(self, *args):
         if args:
             self.message = args[0]
