@@ -22,8 +22,7 @@ from .utils import *
 
 
 def validate_data(sorted_d, sorted_s):
-    m = len(sorted_s)
-    if len(sorted_d) > 0 and np.max(sorted_d) > m:
+    if len(sorted_d) > 0 and np.max(sorted_d) > len(sorted_s):
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False
@@ -46,45 +45,42 @@ def get_wanting_slots(degs, facet):
 
     """
     n = len(degs)
-    return np.array([degs[_] - 1 if _ in set(facet) else degs[_] for _ in range(n)], dtype=np.int_), \
-           np.array([0 if _ in set(facet) else degs[_] for _ in range(n)], dtype=np.int_)  # non_shielding
+    l_1 = [degs[_] - 1 if _ in set(facet) else degs[_] for _ in range(n)]
+    l_2 = [0 if _ in set(facet) else degs[_] for _ in range(n)]
+    return np.array(l_1, dtype=np.int_), np.array(l_2, dtype=np.int_)
 
 
 def simple_validate(degs, sizes, facet):
-    current_facets = [facet]
     wanting_degs, non_shielding = get_wanting_slots(degs, facet)  # wanting_degs (non_shielding & shielding)
-    # print(f"wanting_degs = {wanting_degs}")
     if min(wanting_degs) < 0:
         return False, "Rejected b/c added in min(wanting_degs) < 0"
     if len(sizes) == 0:
         return True, "Last facet explored."
     elif len(sizes) == 1:
-        for _ in current_facets:
+        for _ in [facet]:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(_)):
                 return False, "Second last facet explored. " \
                               "But the very last facet is doomed to fail the no-inclusion constraint."
-    if np.any(wanting_degs > len(sizes)):  # useful
+    if np.any(wanting_degs > len(sizes)):
         return False, "Some degrees require more facets than the actual remaining number."
-
-    if np.count_nonzero(wanting_degs) < sizes[0]:  # useful
+    if np.count_nonzero(wanting_degs) < sizes[0]:
         return False, "Rejected b/c np.count_nonzero(wanting_degs) < sizes[0]."
     elif np.count_nonzero(wanting_degs) == sizes[0]:
         if np.sum(wanting_degs) > np.count_nonzero(wanting_degs):
             return False, "Rejected b/c np.sum(wanting_degs) > np.count_nonzero(wanting_degs)."
     if np.min(non_shielding) >= 0:
-        if validate_nonshielding(sizes, wanting_degs, non_shielding):  # useful
+        if validate_nonshielding(sizes, wanting_degs, non_shielding):
             return False, "Rejected while validating non_shielding vertices."
-
-    return wanting_degs, sizes, current_facets
+    return wanting_degs, sizes, [facet]  # last one is candidate_facets.
 
 
 def validate_nonshielding(curent_sizes, wanting_degs, non_shielding):
-    """
-    Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
+    r"""Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
 
     Parameters
     ----------
     curent_sizes
+    wanting_degs
     non_shielding
 
     Returns
@@ -123,7 +119,6 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verb
               )
     collected_facets = []
     exempt_vids = []
-    # sizes = np.array(sizes, dtype=np.int_)
     while Counter(wanting_degs)[len(sizes)] != 0:
         if len(sizes) > 1:
             if not basic_validations_degs_and_sizes(degs=wanting_degs, sizes=sizes):
@@ -191,10 +186,11 @@ def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_
 
     Parameters
     ----------
-    wanting_degs
-    curent_sizes
     current_facets
+    blocked_sets
+    must_be_filled_vids
     exempt_vids
+
 
     Returns
     -------

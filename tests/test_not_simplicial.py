@@ -36,3 +36,9 @@ def test_not_simplicial_unequal_seq_sum():
     degree_list, size_list = ([3, 3, 3, 2, 1, 1], [6, 6, 2])
     st = Test(degree_list, size_list)
     assert st.is_simplicial()[0] is False
+
+
+def test_cutoff():
+    degree_list, size_list = ([12, 8, 5, 3, 1, 1, 1, 1, 1, 1, 1, 1], [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3])
+    st = Test(degree_list, size_list, verbose=False, width=1e4, cutoff=3000)
+    assert st.is_simplicial()[0] is False

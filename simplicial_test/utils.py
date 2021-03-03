@@ -20,7 +20,6 @@
 
 import numpy as np
 from dataclasses import dataclass, field
-from .custom_exceptions import NonSimplicialSignal
 from collections import defaultdict, Counter
 from functools import partial
 from typing import List
@@ -31,6 +30,8 @@ from copy import deepcopy
 class SimplicialDepot:
     degree_list: List
     size_list: List
+    simplicial: bool = False
+    facets: tuple = ()
     prev_d: dict = field(repr=False, default_factory=dict)
     prev_s: dict = field(repr=False, default_factory=dict)
     prev_b: dict = field(repr=False, default_factory=dict)
@@ -49,6 +50,7 @@ class SimplicialDepot:
         self.level_map = defaultdict(partial(np.ndarray, max(len(self.degree_list), len(self.size_list)), int))
         for ind, _ in enumerate(self.degree_list):
             self.level_map[0][ind] = ind
+        for ind, _ in enumerate(self.size_list):
             self.valid_trials[ind] = None
         self.level_map[1].fill(-1)
 
@@ -76,7 +78,9 @@ class SimplicialDepot:
         self.conv_time += 1
         self.depths += [level - 1]
         if self.conv_time >= self.cutoff:
-            raise NonSimplicialSignal
+            return True
+        else:
+            return False
 
 
 class SimplexRegistrar(object):
@@ -173,8 +177,8 @@ def transform_facets(facets, mapping, to="l+1") -> list:
 
 
 def remove_ones(sizes, wanting_degs, choose_from=None):
-    removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[
-                        :Counter(sizes)[1]]  # todo, to figure out: you cannot do [-Counter(s)[1]:]
+    # todo, to figure out: you cannot do [-Counter(s)[1]:]
+    removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[:Counter(sizes)[1]]
     wanting_degs[removed_vtx_sites] = 0
     return wanting_degs, removed_vtx_sites.tolist()
 
