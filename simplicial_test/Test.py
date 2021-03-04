@@ -155,6 +155,7 @@ class Test(SimplexRegistrar):
         if not valid_trials:
             self.s_depot.valid_trials[self._level - 1] = self.get_distinct_selection(
                 size, self.s_depot.prev_d[1], self.blocked_sets, self.s_depot.level_map[self._level - 1])
+        counter = 0
         while True:
             try:
                 facet = next(self.s_depot.valid_trials[self._level - 1])  # candidate_facet
@@ -162,6 +163,9 @@ class Test(SimplexRegistrar):
                 raise NoMoreBalls
             if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
+            counter += 1
+            if counter > self.width:
+                raise NoMoreBalls
             ind, reason = self.validate(facet)
             if ind:
                 picked_facet, picked_facet_id = self.register(facet)
@@ -243,15 +247,11 @@ class Test(SimplexRegistrar):
         raise GoToNextLevel(sorted_wanting_degs, sizes, blocked_sets)
 
     def is_simplicial(self):
+        if not validators.validate_data(self.degree_list, self.size_list):
+            return False, self.__mark(False, tuple())
         while True:
             self._level += 1
             self._verbose_logging()
-            if not validators.validate_data(self.degree_list, self.size_list):
-                self.non_simplicial_signal = self.s_depot.add_to_time_counter(self._level - 1)
-                if self._level != 1:
-                    self._rollback(self._level - 1)
-                    continue
-                return False, self.__mark(False, tuple())
             self._stage_state()
             s = self.size_list.pop(0)
             if self.non_simplicial_signal:
@@ -261,10 +261,12 @@ class Test(SimplexRegistrar):
             except SimplicialSignal as e:
                 return True, self.__mark(True, self._assemble_simplicial_facets(e.message))
             except GoToNextLevel as e:
-                self.degree_list, self.size_list, self.blocked_sets = e.message
-                continue
+                degree_list, size_list, blocked_sets = e.message
+                if not validators.validate_data(degree_list, size_list):
+                    self._rollback(self._level - 1)
+                else:
+                    self.degree_list, self.size_list, self.blocked_sets = degree_list, size_list, blocked_sets
             except NoMoreBalls:
-                self.non_simplicial_signal = self.s_depot.add_to_time_counter(self._level - 1)
                 if self._level == 1:
                     return False, self.__mark(False, tuple())
                 if self._level > self.depth:

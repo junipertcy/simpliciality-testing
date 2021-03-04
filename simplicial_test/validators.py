@@ -28,6 +28,8 @@ def validate_data(sorted_d, sorted_s):
         return False
     if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
+    # if Counter([_ - max(sorted_d) for _ in sorted_s])[1] > len(sorted_d) - 1:
+    #     return False
     return True
 
 

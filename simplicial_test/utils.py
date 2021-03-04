@@ -40,7 +40,7 @@ class SimplicialDepot:
     collects: dict = field(repr=False, default_factory=dict)
     candidates: dict = field(repr=False, default_factory=dict)
     valid_trials: dict = field(repr=False, default_factory=dict)
-    depths: List = field(repr=False, default_factory=list)
+    levels_traj: List = field(repr=False, default_factory=list)
     conv_time: int = field(repr=False, default=0)
     cutoff: int = field(repr=False, init=False)
 
@@ -63,9 +63,9 @@ class SimplicialDepot:
                 self.level_map[level][_] = mapping2shrinked[vtx_current_view]
 
     def add_to_time_counter(self, level):
-        self.time[level - 1] += 1
+        self.time[int(level - 1)] += 1  # this is rather pointless, but it works around an unidentified bug
         self.conv_time += 1
-        self.depths += [level - 1]
+        self.levels_traj += [level - 1]
         if self.conv_time >= self.cutoff:
             return True
         else:
@@ -354,58 +354,3 @@ def write_simplicial_list(el, path):
             for __el in _el:
                 f.write(str(__el) + " ")
             f.write("\n")
-
-        # return sorted(partitions, key=lambda x: [Counter(x)[1], max(x) - len(x)] + list(x), reverse=True)
-
-# def get_slimmest_d(s):
-#     """
-#
-#     Parameters
-#     ----------
-#     s: size list
-#
-#     Returns
-#     -------
-#
-#     """
-#     s = sorted(s)
-#     pool = set()
-#     tentative_ = []
-#     for _s in s:
-#         tentative = tentative_
-#         if len(tentative) == 0:
-#             idx = 0
-#             for _ in range(_s):
-#                 tentative += [idx]
-#                 idx += 1
-#             pool.add(tuple(tentative))
-#             tentative_ = tentative
-#             continue
-#         tentative[-1] += 1
-#         idx = tentative[-1]
-#         for _ in range(_s - len(tentative)):
-#             idx += 1
-#             tentative += [idx]
-#
-#         pool.add(tuple(tentative))
-#         tentative_ = tentative
-#     return sorted(Counter(flatten(pool)).values(), reverse=True)
-
-# def update_deg_seq(deg_seq, facet, value):
-#     if value not in [+1, -1]:
-#         raise NotImplementedError
-#     for _ in facet:
-#         deg_seq[_] += value
-
-
-# def shrink_degs(degs, inv_map):
-#     d = dict()
-#     for idx, _degs in enumerate(degs):
-#         try:
-#             d[inv_map[idx]] = _degs
-#         except KeyError:
-#             pass
-#     d_list = list()
-#     for idx, _d in enumerate(d.values()):
-#         d_list += [d[idx]]
-#     return np.array(d_list, dtype=np.int_)
