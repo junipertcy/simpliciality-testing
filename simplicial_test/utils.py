@@ -38,7 +38,7 @@ class SimplicialDepot:
     mappers: dict = field(repr=False, default_factory=dict)
     exempts: dict = field(repr=False, default_factory=dict)
     collects: dict = field(repr=False, default_factory=dict)
-    currents: dict = field(repr=False, default_factory=dict)
+    candidates: dict = field(repr=False, default_factory=dict)
     valid_trials: dict = field(repr=False, default_factory=dict)
     depths: List = field(repr=False, default_factory=list)
     conv_time: int = field(repr=False, default=0)
@@ -46,8 +46,8 @@ class SimplicialDepot:
 
     def __post_init__(self):
         self.explored = defaultdict(set)
-        self.time = np.zeros(max(len(self.degree_list), len(self.size_list)) + 1, np.int_)
-        self.level_map = defaultdict(partial(np.ndarray, max(len(self.degree_list), len(self.size_list)), int))
+        self.time = np.zeros(len(self.size_list), np.int_)
+        self.level_map = defaultdict(partial(np.ndarray, len(self.degree_list), int))
         for ind, _ in enumerate(self.degree_list):
             self.level_map[0][ind] = ind
         for ind, _ in enumerate(self.size_list):
@@ -55,23 +55,12 @@ class SimplicialDepot:
         self.level_map[1].fill(-1)
 
     def compute_level_map(self, level, mapping2shrinked):
-        n = len(self.degree_list)
-        if level > 1:
-            for _ in range(n):
-                vtx_current_view = self.level_map[level - 1][_]
-                if vtx_current_view == -1:
-                    self.level_map[level][_] = -1
-                    continue
-                try:
-                    self.level_map[level][_] = mapping2shrinked[vtx_current_view]
-                except KeyError:
-                    self.level_map[level][_] = -1
-        else:
-            for _ in range(n):
-                try:
-                    self.level_map[1][_] = mapping2shrinked[_]
-                except KeyError:
-                    self.level_map[1][_] = -1
+        for _ in range(len(self.degree_list)):
+            vtx_current_view = self.level_map[level - 1][_]
+            if vtx_current_view == -1 or vtx_current_view not in mapping2shrinked:
+                self.level_map[level][_] = -1
+            else:
+                self.level_map[level][_] = mapping2shrinked[vtx_current_view]
 
     def add_to_time_counter(self, level):
         self.time[level - 1] += 1
@@ -89,7 +78,6 @@ class SimplexRegistrar(object):
         self.name2id = dict()
         self.id2name = dict()
         self.facet_size_per_id = np.array([], dtype=np.int_)
-        self.logbook = dict()
 
     def register(self, name) -> (tuple, int):
         name = tuple(sorted(name, reverse=True))
@@ -99,12 +87,6 @@ class SimplexRegistrar(object):
             self.pointer += 1
             self.facet_size_per_id = np.append(self.facet_size_per_id, [len(name)])
         return name, self.name2id[name]
-
-    def log_forbidden(self, name, reason) -> None:
-        self.logbook[tuple(name)] = {
-            "is_simplicial": False,
-            "reason": reason
-        }
 
 
 def flatten(nested_list):
