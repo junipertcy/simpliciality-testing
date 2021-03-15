@@ -262,6 +262,7 @@ class Test(SimplexRegistrar):
                 return True, self.__mark(True, self._assemble_simplicial_facets(e.message))
             except GoToNextLevel as e:
                 degree_list, size_list, blocked_sets = e.message
+                # print(f"(l={self._level}) degree_list={degree_list}, size_list={size_list}")
                 if not validators.validate_data(degree_list, size_list):
                     self._rollback(self._level - 1)
                 else:
@@ -297,6 +298,9 @@ class Test(SimplexRegistrar):
         return facets
 
     def _rollback(self, level):
+        if level == 0:
+            self.non_simplicial_signal = True
+            return
         self._clean_valid_trials()
         self.non_simplicial_signal = self.s_depot.add_to_time_counter(self._level - 1)
         for _ in np.arange(self._level, level, -1):
@@ -317,10 +321,10 @@ class Test(SimplexRegistrar):
     def _verbose_logging(self):
         if self.verbose:
             print(f"========== (l={self._level}) ==========\n"
-                  f"Size list: {self.size_list}\n"
-                  f"Degree list: {self.degree_list}\n"
+                  f"Size list: {[_ for _ in self.size_list if _ > 0]}\n"
+                  f"Degree list: {[_ for _ in self.degree_list if _ > 0]}\n"
                   f"blocked_sets = {self.blocked_sets}\n"
-                  f"currents = {self.s_depot.candidates}\n"
-                  f"exempts = {self.s_depot.exempts}\n"
-                  f"collects = {self.s_depot.collects}"
+                  # f"currents = {self.s_depot.candidates}\n"
+                  # f"exempts = {self.s_depot.exempts}\n"
+                  # f"collects = {self.s_depot.collects}"
                   )

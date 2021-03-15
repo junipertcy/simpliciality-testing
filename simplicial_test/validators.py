@@ -19,6 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from .utils import *
+from time import sleep
 
 
 def validate_data(sorted_d, sorted_s):
@@ -28,8 +29,19 @@ def validate_data(sorted_d, sorted_s):
         return False
     if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
-    # if Counter([_ - max(sorted_d) for _ in sorted_s])[1] > len(sorted_d) - 1:
-    #     return False
+
+    _sorted_s = []
+    counter = 0
+    for _ in sorted_s:
+        if counter < max(sorted_d):
+            _sorted_s += [_ - 1]
+            counter += 1
+        else:
+            _sorted_s += [_]
+
+    if Counter(_sorted_s)[1] > len([_ for _ in sorted_d if _ > 0]) - 1:
+        return False
+
     return True
 
 
@@ -112,7 +124,7 @@ def basic_validations_degs_and_sizes(degs, sizes):
 def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verbose=False) -> (bool, tuple):
     if verbose:
         print(f"----- (BEGIN: reducing seq) -----\n"
-              f"Wanting degrees: {wanting_degs}\n"
+              f"Wanting degrees: {[_ for _ in wanting_degs if _ > 0]}\n"
               f"Size list: {sizes}\n"
               f"Current facets: {current_facets}\n"
               f"blocked_sets = {blocked_sets}"
@@ -156,7 +168,7 @@ def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verb
             return False, tuple([None] * 4)
     if verbose:
         print(f"----- (↓ Returning these data ↓) -----\n"
-              f"Wanting degrees: {wanting_degs}\n"
+              f"Wanting degrees: {[_ for _ in wanting_degs if _ > 0]}\n"
               f"Size list: {sizes}\n"
               f"Collected facets: {collected_facets}\n"
               f"Exempt vertex ids: {exempt_vids}\n"
