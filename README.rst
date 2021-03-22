@@ -93,6 +93,101 @@ to compute!
    Fig. 3. Flower-visiting insects (nodes, n=679) and plants (facets f=57) network in Kyoto.
 
 
+.. list-table:: Empirical networks used in this work.
+   :widths: 20 10 10 10 10 10 10 10 10
+   :header-rows: 1
+
+   * - Dataset
+     - # of edges, E
+     - # of facets, \|s\|
+     - # of nodes, \|d\|
+     - (s_max, s_min)
+     - (d_max, d_min)
+     - conv. time
+     - conv. time per facet
+     - f(k)
+   * - Macaque brain dataset
+     - 628
+     - n/a
+     - n/a
+     - n/a
+     - n/a
+     - n/a
+     - n/a
+     - n/a
+   * - contact-primary-school
+     - 20615
+     - 8010
+     - 242
+     - (5, 2)
+     - (174, 20)
+     - 115934
+     - 14.5
+     - n/a
+   * - contact-high-school
+     - 11770
+     - 4862
+     - 327
+     - (5, 2)
+     - (90, 2)
+     - 3
+     - 0.00064
+     - n/a
+   * - senate-committees
+     - 5165
+     - 275
+     - 282
+     - (31, 4)
+     - (59, 1)
+     - 0
+     - 0
+     - n/a
+   * - house-committees
+     - 11660
+     - 302
+     - 1290
+     - (82, 3)
+     - (43, 1)
+     - 0
+     - 0
+     - n/a
+   * - mathoverflow-answers
+     - 131406
+     - 5296
+     - 73851
+     - (1784, 2)
+     - (169, 1)
+     - 0
+     - 0
+     - n/a
+   * - senate-bills
+     - 92876
+     - 3599
+     - 294
+     - (99, 3)
+     - (1147, 1)
+     - too slow
+     - too slow
+     - n/a
+   * - house-bills
+     - 927075
+     - 23267
+     - 1494
+     - (399, 2)
+     - (3824, 1)
+     - too slow
+     - too slow
+     - n/a
+   * - walmart-trips
+     - 447347
+     - 63687
+     - 88860
+     - (25, 2)
+     - (5412, 1)
+     - too slow
+     - too slow
+     - n/a
+
 
 Number of simplicial sequences which partition n
 ------------------------------------------------

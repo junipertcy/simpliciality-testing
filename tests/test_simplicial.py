@@ -1,6 +1,17 @@
 from simplicial_test import *
 
 
+def test_all_ones():
+    size_list, degree_list = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    st = Test(degree_list, size_list)
+    is_simplicial, facets = st.is_simplicial()
+    assert is_simplicial is True
+    joint_seqs = compute_joint_seq(facets)
+    assert if_facets_simplicial(facets) is True
+    assert joint_seqs[0] == sorted(size_list, reverse=True)
+    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+
+
 def test_all_ones_on_deg_seq():
     size_list, degree_list = ([10], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     st = Test(degree_list, size_list)

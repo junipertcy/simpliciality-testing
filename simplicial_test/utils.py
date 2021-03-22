@@ -117,7 +117,7 @@ def simplify_blocked_sets(bsets):
     """
     simplified_bsets = []
     for _bsets in sorted(bsets, key=lambda _: -len(_)):
-        if not tuple(_bsets) in simplified_bsets:
+        if not tuple(set(_bsets)) in simplified_bsets:
             if len(simplified_bsets) > 0:
                 to_add = True
                 for _ in simplified_bsets:
@@ -125,9 +125,9 @@ def simplify_blocked_sets(bsets):
                         to_add = False
                         break
                 if to_add:
-                    simplified_bsets += [_bsets]
+                    simplified_bsets += [tuple(set(_bsets))]
             else:
-                simplified_bsets += [_bsets]
+                simplified_bsets += [tuple(set(_bsets))]
     return simplified_bsets
 
 
@@ -165,7 +165,7 @@ def remove_ones(sizes, wanting_degs, choose_from=None):
     return wanting_degs, removed_vtx_sites.tolist()
 
 
-def pair_one_by_one(size_list, degree_list) -> (list, list):
+def pair_one_by_one(size_list, degree_list) -> (list, list, int):
     """
     This function is used to pair up the ones in size/deg lists, since this is the only plausible situation.
     Note that it is only applied when level=0.

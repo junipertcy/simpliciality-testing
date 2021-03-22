@@ -247,6 +247,8 @@ class Test(SimplexRegistrar):
         raise GoToNextLevel(sorted_wanting_degs, sizes, blocked_sets)
 
     def is_simplicial(self):
+        if sum(self.size_list) == 0:
+            return True, self.__mark(True, self._assemble_simplicial_facets(self.fids2facets()))
         if not validators.validate_data(self.degree_list, self.size_list):
             return False, self.__mark(False, tuple())
         while True:
@@ -295,6 +297,7 @@ class Test(SimplexRegistrar):
     def __mark(self, simplicial, facets):
         self.s_depot.simplicial = simplicial
         self.s_depot.facets = facets
+        del self.s_depot.valid_trials
         return facets
 
     def _rollback(self, level):

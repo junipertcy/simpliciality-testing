@@ -19,7 +19,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from .utils import *
-from time import sleep
 
 
 def validate_data(sorted_d, sorted_s):
