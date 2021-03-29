@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, Counter
 from functools import partial
 from typing import List
-from copy import deepcopy
+# from copy import deepcopy
 
 
 @dataclass(frozen=False)
@@ -63,7 +63,7 @@ class SimplicialDepot:
                 self.level_map[level][_] = mapping2shrinked[vtx_current_view]
 
     def add_to_time_counter(self, level):
-        self.time[int(level - 1)] += 1  # this is rather pointless, but it works around an unidentified bug
+        self.time[int(level - 1)] += 1
         self.conv_time += 1
         self.levels_traj += [level - 1]
         if self.conv_time >= self.cutoff:
@@ -217,39 +217,39 @@ def sort_callback(facets):
     return t
 
 
-# def get_seq2seq_mapping(degs):
-#     mapping2enlarged = dict()
-#     nonzero_degs = np.count_nonzero(degs)
-#     argsort = np.argsort(degs)[::-1]
-#     for idx in np.arange(0, nonzero_degs, 1):
-#         mapping2enlarged[idx] = argsort[idx]
-#     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
-#     return mapping2shrinked, mapping2enlarged
-
 def get_seq2seq_mapping(degs):
-    old2new = dict()
-    for idx, _deg in enumerate(degs):
-        old2new[idx] = _deg
-    inv_old2new = defaultdict(list)
-    for key in old2new.keys():
-        if old2new[key] != 0:
-            inv_old2new[old2new[key]] += [key]
-    _idx = 0
-    _inv_old2new = deepcopy(inv_old2new)
-
-    keys = sorted(inv_old2new.keys(), reverse=True)
-    for key in keys:
-        for idx, _ in enumerate(inv_old2new[key]):
-            inv_old2new[key][idx] = _idx
-            _idx += 1
-
     mapping2enlarged = dict()
-    for key in inv_old2new.keys():
-        for idx, new_key in enumerate(inv_old2new[key]):
-            mapping2enlarged[new_key] = _inv_old2new[key][idx]
-
+    nonzero_degs = np.count_nonzero(degs)
+    argsort = np.argsort(degs)[::-1]
+    for idx in np.arange(0, nonzero_degs, 1):
+        mapping2enlarged[idx] = argsort[idx]
     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
     return mapping2shrinked, mapping2enlarged
+
+# def get_seq2seq_mapping(degs):
+#     old2new = dict()
+#     for idx, _deg in enumerate(degs):
+#         old2new[idx] = _deg
+#     inv_old2new = defaultdict(list)
+#     for key in old2new.keys():
+#         if old2new[key] != 0:
+#             inv_old2new[old2new[key]] += [key]
+#     _idx = 0
+#     _inv_old2new = deepcopy(inv_old2new)
+#
+#     keys = sorted(inv_old2new.keys(), reverse=True)
+#     for key in keys:
+#         for idx, _ in enumerate(inv_old2new[key]):
+#             inv_old2new[key][idx] = _idx
+#             _idx += 1
+#
+#     mapping2enlarged = dict()
+#     for key in inv_old2new.keys():
+#         for idx, new_key in enumerate(inv_old2new[key]):
+#             mapping2enlarged[new_key] = _inv_old2new[key][idx]
+#
+#     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
+#     return mapping2shrinked, mapping2enlarged
 
 
 def filter_blocked_facets(blocked_facets, exempt_vids):

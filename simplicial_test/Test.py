@@ -120,7 +120,6 @@ class Test(SimplexRegistrar):
 
         """
         equiv2vid = defaultdict(list)
-        blocked_sets = [_ for _ in blocked_sets if len(_) >= size]
         for vid, _ in enumerate(degs):
             if level_map[vid] != -1:
                 key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
@@ -155,7 +154,6 @@ class Test(SimplexRegistrar):
         if not valid_trials:
             self.s_depot.valid_trials[self._level - 1] = self.get_distinct_selection(
                 size, self.s_depot.prev_d[1], self.blocked_sets, self.s_depot.level_map[self._level - 1])
-        counter = 0
         while True:
             try:
                 facet = next(self.s_depot.valid_trials[self._level - 1])  # candidate_facet
@@ -163,8 +161,7 @@ class Test(SimplexRegistrar):
                 raise NoMoreBalls
             if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
-            counter += 1
-            if counter > self.width:
+            if self.s_depot.time[self._level - 1] >= self.width:
                 raise NoMoreBalls
             ind, reason = self.validate(facet)
             if ind:
@@ -264,7 +261,6 @@ class Test(SimplexRegistrar):
                 return True, self.__mark(True, self._assemble_simplicial_facets(e.message))
             except GoToNextLevel as e:
                 degree_list, size_list, blocked_sets = e.message
-                # print(f"(l={self._level}) degree_list={degree_list}, size_list={size_list}")
                 if not validators.validate_data(degree_list, size_list):
                     self._rollback(self._level - 1)
                 else:
