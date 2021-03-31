@@ -74,8 +74,8 @@ class Test(SimplexRegistrar):
             self.size_list = self.s_depot.size_list
         self.blocked_sets = []
 
-        self.depth = kwargs.pop("depth", 1e2)
-        self.width = kwargs.pop("width", 1e2)
+        self.depth = kwargs.pop("depth", np.infty)
+        self.width = kwargs.pop("width", np.infty)
         self.s_depot.cutoff = kwargs.pop("cutoff", np.infty)
         self.verbose = verbose
         self.current_fids = []
@@ -230,9 +230,9 @@ class Test(SimplexRegistrar):
 
         sorted_wanting_degs = sorted(wanting_degs, reverse=True)
         _ = (tuple(sorted_wanting_degs), tuple(blocked_sets))
-        if _ in self.s_depot.explored[self._level]:
+        if _[1] in self.s_depot.explored[_[0]]:
             raise NoMoreBalls
-        self.s_depot.explored[self._level].add(_)
+        self.s_depot.explored[_[0]].add(_[1])
 
         self.s_depot.mappers[self._level] = get_seq2seq_mapping(wanting_degs)  # (mapping2shrinked, mapping2enlarged)
         self.s_depot.compute_level_map(self._level, self.s_depot.mappers[self._level][0])

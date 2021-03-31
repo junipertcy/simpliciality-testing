@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, Counter
 from functools import partial
 from typing import List
-# from copy import deepcopy
+from copy import deepcopy
 
 
 @dataclass(frozen=False)
@@ -217,39 +217,39 @@ def sort_callback(facets):
     return t
 
 
-def get_seq2seq_mapping(degs):
-    mapping2enlarged = dict()
-    nonzero_degs = np.count_nonzero(degs)
-    argsort = np.argsort(degs)[::-1]
-    for idx in np.arange(0, nonzero_degs, 1):
-        mapping2enlarged[idx] = argsort[idx]
-    mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
-    return mapping2shrinked, mapping2enlarged
-
 # def get_seq2seq_mapping(degs):
-#     old2new = dict()
-#     for idx, _deg in enumerate(degs):
-#         old2new[idx] = _deg
-#     inv_old2new = defaultdict(list)
-#     for key in old2new.keys():
-#         if old2new[key] != 0:
-#             inv_old2new[old2new[key]] += [key]
-#     _idx = 0
-#     _inv_old2new = deepcopy(inv_old2new)
-#
-#     keys = sorted(inv_old2new.keys(), reverse=True)
-#     for key in keys:
-#         for idx, _ in enumerate(inv_old2new[key]):
-#             inv_old2new[key][idx] = _idx
-#             _idx += 1
-#
 #     mapping2enlarged = dict()
-#     for key in inv_old2new.keys():
-#         for idx, new_key in enumerate(inv_old2new[key]):
-#             mapping2enlarged[new_key] = _inv_old2new[key][idx]
-#
+#     nonzero_degs = np.count_nonzero(degs)
+#     argsort = np.argsort(degs)[::-1]
+#     for idx in np.arange(0, nonzero_degs, 1):
+#         mapping2enlarged[idx] = argsort[idx]
 #     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
 #     return mapping2shrinked, mapping2enlarged
+
+def get_seq2seq_mapping(degs):
+    old2new = dict()
+    for idx, _deg in enumerate(degs):
+        old2new[idx] = _deg
+    inv_old2new = defaultdict(list)
+    for key in old2new.keys():
+        if old2new[key] != 0:
+            inv_old2new[old2new[key]] += [key]
+    _idx = 0
+    _inv_old2new = deepcopy(inv_old2new)
+
+    keys = sorted(inv_old2new.keys(), reverse=True)
+    for key in keys:
+        for idx, _ in enumerate(inv_old2new[key]):
+            inv_old2new[key][idx] = _idx
+            _idx += 1
+
+    mapping2enlarged = dict()
+    for key in inv_old2new.keys():
+        for idx, new_key in enumerate(inv_old2new[key]):
+            mapping2enlarged[new_key] = _inv_old2new[key][idx]
+
+    mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
+    return mapping2shrinked, mapping2enlarged
 
 
 def filter_blocked_facets(blocked_facets, exempt_vids):
@@ -298,7 +298,7 @@ def if_facets_simplicial(facets) -> bool:
 
 
 def accel_asc(n):
-    """from: http://jeromekelleher.net/generating-integer-partitions.html"""
+    """source: http://jeromekelleher.net/generating-integer-partitions.html"""
     a = [0 for i in range(n + 1)]
     k = 1
     y = n - 1
