@@ -22,8 +22,13 @@ from . import validators
 from .enumeration import sort_facets
 from .utils import *
 from .custom_exceptions import NoMoreBalls, SimplicialSignal, GoToNextLevel
-from itertools import combinations
+# from itertools import combinations
+from sage.all import Combinations
 from copy import deepcopy
+
+import sys
+
+sys.setrecursionlimit(int(1e6))
 
 
 class Test(SimplexRegistrar):
@@ -125,17 +130,19 @@ class Test(SimplexRegistrar):
                 key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
                 equiv2vid[key] += [level_map[vid]]
                 equiv2vid["pool"] += [key]
-        equiv_class_pool = combinations(equiv2vid["pool"], size)
-        explored_set = set()
+        # equiv_class_pool = combinations(equiv2vid["pool"], size)
+        equiv_class_pool = Combinations(equiv2vid["pool"], size).__iter__()
+        # explored_set = set()
         while True:
             facet = []
             tracker = defaultdict(int)
             for equiv_class in next(equiv_class_pool):
                 facet += [equiv2vid[equiv_class][tracker[equiv_class]]]  # vids_same_equiv_class[tracker[equiv_class]]
                 tracker[equiv_class] += 1
-            if tuple(facet) not in explored_set:
-                explored_set.add(tuple(facet))
-                yield tuple(facet)
+            yield tuple(facet)
+            # if tuple(facet) not in explored_set:
+            #     explored_set.add(tuple(facet))
+            #     yield tuple(facet)
 
     def sample_candidate_facet(self, size, valid_trials=None):
         """
@@ -155,14 +162,14 @@ class Test(SimplexRegistrar):
             self.s_depot.valid_trials[self._level - 1] = self.get_distinct_selection(
                 size, self.s_depot.prev_d[1], self.blocked_sets, self.s_depot.level_map[self._level - 1])
         while True:
+            if self.s_depot.time[self._level - 1] >= self.width or self.non_simplicial_signal:
+                raise NoMoreBalls
             try:
                 facet = next(self.s_depot.valid_trials[self._level - 1])  # candidate_facet
             except RuntimeError:
                 raise NoMoreBalls
             if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
                 continue
-            if self.s_depot.time[self._level - 1] >= self.width:
-                raise NoMoreBalls
             ind, reason = self.validate(facet)
             if ind:
                 picked_facet, picked_facet_id = self.register(facet)
