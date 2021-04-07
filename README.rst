@@ -1,4 +1,4 @@
-simpliciality_test
+simpliciality-test
 ==================
 
 .. image:: https://img.shields.io/badge/python-3.8-blue.svg?style=flat
@@ -11,11 +11,9 @@ simpliciality_test
 
 A constructive greedy algorithm to check whether a joint sequence of degree/size distributions is simplicial.
 
-Proof of concept
-------------------------------
-!!! (Not a randomized algorithm anymore. This section needs to re-write.) !!!
-
-First things first, install the required libraries:
+Hi. Nice to meet you!
+---------------------
+The library requires `SageMath`_ and a few PyPI libraries:
 
 ..
 
@@ -27,18 +25,20 @@ To warm up, try:
 
     python is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt
 
-By running the snippet several times, you may notice that the algorithm is not deterministic. 
-Indeed, we are building the state space tree with the backtracking algorithm, 
-and therefore sampling the ensemble that satisfies the joint degree sequence
-(defined by ``00_degs.txt`` & ``00_sizes.txt``). In other words, the joint sequence is simplicial!
+Or, you may try with a bunch of unit tests (see `test/`_):
 
-The backtracking algorithm is an exhaustive search; 
-that is, all feasible solutions are considered and it will always find the optimal solution. 
-This means that, unfortunately, our sampling algorithm only works for very small systems.  
+..
 
-We still lack a proper existence test to check whether a joint sequence is simplicial. 
-Luckily, when the sequence is simplicial, we do find a greedy deterministic algorithm that picks up an simplicial instance!
-This can work in fairly large inputs.
+   pytest
+
+This is a deterministic, backtracking-based search algorithm for solving the *simplicial realization problem*.
+If your input joint sequence is not realizable (as a simplicial complex), often we would need
+to traverse the entire search tree, which would take a huge amount of time!
+Happily, more than 90% of the input joint sequences lies in the *polynomial regime*,
+which means that they can be solved easily.
+
+For example, you can try the `crime network dataset`_ from this inspiring `Phys. Rev. E paper`_,
+which has 551 nodes and 194 facets.
 
 For example,
 
@@ -46,22 +46,12 @@ For example,
 
     python is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
 
-The dataset is the `crime network dataset`_ from the `Phys. Rev. E paper`_, having 551 nodes and 194 facets.
+Boom! It's rather fast, isn't it?
 
-Moreover, we find that the greedy algorithm can go with two directions,
-and sometimes only the "backward direction" work. (TODO: this section has to be re-written)
+Related experiments
+-------------------
+TODO.
 
-For example,
-
-..
-
-    python is_simplicial.py -k datasets/02_degs.txt -s datasets/02_sizes.txt
-
-
-Interesting? I think it is!
-
-Pilot experiments
-----------------------
 The three figures below show the solution found by the greedy algorithm.
 
 Those black regions denote 1's, whereas white blocks denote 0's.
@@ -189,14 +179,9 @@ to compute!
      - n/a
 
 
-Number of simplicial sequences which partition n
-------------------------------------------------
-Suppose we have the sequences of degree distribution λ1 and size distribution λ2, each of which partitions n.
-
-
 Installation
 ------------
-The package can be installed with pip.
+[final goal] The package can be installed with pip.
 
 ::
 
@@ -216,3 +201,5 @@ Acknowledgement
 .. _`Phys. Rev. E paper`: https://doi.org/10.1103/PhysRevE.96.032312
 .. _`A000041`: https://oeis.org/A000041
 .. _`Travis CI tests`: https://travis-ci.org/github/junipertcy/simpliciality_test
+.. _`SageMath`: https://www.sagemath.org/index.html
+.. _`test/`: test/

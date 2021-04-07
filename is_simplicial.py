@@ -8,7 +8,7 @@ from simplicial_test.Test import *
 def is_simplicial(degree_sequence, size_sequence):
     degree_sequence = list(map(int, degree_sequence.read().replace("\n", "").split(" ")))
     size_sequence = list(map(int, size_sequence.read().replace("\n", "").split(" ")))
-    is_simplicial, facets = SimplicialTest(degree_sequence, size_sequence).is_simplicial()
+    is_simplicial, facets = Test(degree_sequence, size_sequence).is_simplicial()
     if is_simplicial is True:
         joint_seqs = compute_joint_seq(facets)
         assert if_facets_simplicial(facets) is True
