@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to verify simplicial sequences
+# simplicial_test -- a python module to realize simplicial joint sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -22,12 +22,8 @@ from . import validators
 from .enumeration import sort_facets
 from .utils import *
 from .custom_exceptions import NoMoreBalls, SimplicialSignal, GoToNextLevel
-from sage.all import Combinations
+from more_itertools import distinct_combinations
 from copy import deepcopy
-
-import sys
-
-sys.setrecursionlimit(int(1e6))
 
 
 class Test(SimplexRegistrar):
@@ -129,7 +125,7 @@ class Test(SimplexRegistrar):
                 key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
                 equiv2vid[key] += [level_map[vid]]
                 equiv2vid["pool"] += [key]
-        equiv_class_pool = Combinations(equiv2vid["pool"], size).__iter__()
+        equiv_class_pool = distinct_combinations(equiv2vid["pool"], size)
         while True:
             facet = []
             tracker = defaultdict(int)

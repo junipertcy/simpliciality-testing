@@ -2,13 +2,14 @@
 # `pip install -r requirements.txt` before you can run this.
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
+more_itertools>=8.7.0
+numpy>=1.16.2
 matplotlib>=3.0.0
 scipy>=1.2.1
-numpy>=1.16.2
-click
+click>=7.1.2
 
 # hitting set solver
-python-sat[pblib,aiger]
+# python-sat[pblib,aiger]
 
 #### TESTING-RELATED PACKAGES ####
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
