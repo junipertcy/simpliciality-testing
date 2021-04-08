@@ -20,7 +20,7 @@ from recommonmark.parser import CommonMarkParser
 
 # -- Project information -----------------------------------------------------
 
-project = 'junipertcy/simplicialTest'
+project = 'junipertcy/simplicial-test'
 copyright = '2020-2021, Tzu-Chi Yen <tzuchi.yen@colorado.edu>'
 author = 'Tzu-Chi Yen <tzuchi.yen@colorado.edu>'
 
@@ -90,7 +90,7 @@ pygments_style = 'sphinx'
 #
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
-    'canonical_url': 'https://docs.netscied.tw/simplicialTest/index.html',
+    'canonical_url': 'https://docs.netscied.tw/simplicial-test/index.html',
     'logo_only': False,
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
@@ -108,7 +108,7 @@ html_favicon = 'assets/simplicial-test-favicon.png'
 html_context = {
   'display_github': True,
   'github_user': 'junipertcy',
-  'github_repo': 'simplicialTest',
+  'github_repo': 'simplicial-test',
   'github_version': 'master/docs/'
 }
 
@@ -137,7 +137,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'simplicialTestdoc'
+htmlhelp_basename = 'simplicial-testdoc'
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
@@ -175,7 +175,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'simplicialTest.tex', 'simplicialTest Documentation',
+    (master_doc, 'simplicial-test.tex', 'simplicial-test Documentation',
      'Tzu-Chi Yen', 'manual'),
 ]
 
@@ -185,7 +185,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'simplicialTest', 'simplicialTest Documentation',
+    (master_doc, 'simplicial-test', 'simplicial-test Documentation',
      [author], 1)
 ]
 
@@ -196,8 +196,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'simplicialTest', 'simplicialTest Documentation',
-     author, 'simplicialTest', 'One line description of project.',
+    (master_doc, 'simplicial-test', 'simplicial-test Documentation',
+     author, 'simplicial-test', 'One line description of project.',
      'Miscellaneous'),
 ]
 

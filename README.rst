@@ -92,4 +92,4 @@ Acknowledgement
 .. _`SageMath`: https://www.sagemath.org/index.html
 .. _`tests/`: tests/
 .. _`Simplicial Configuration Model`: https://github.com/jg-you/scm
-.. _`this benchmark`: docs/assets/figures/README.rst
+.. _`this benchmark`: https://docs.netscied.tw/simplicial-test/dataset/benchmark.htm
