@@ -11,7 +11,7 @@ simpliciality-test
    :width: 200
    :alt: logo
 
-`Simplicial-test` implements a recursive algorithm to check whether a joint degree sequence is simplicial.
+*Simplicial-test* implements a recursive algorithm to check whether a joint degree sequence is simplicial.
 
 This is the software repository behind the paper:
 
@@ -31,33 +31,33 @@ Read it on: [`arXiv`_].
 
 First steps
 -----------
-Before we ship the library to PyPI, the program can be downloaded from GitHub:
+*simplicial-test* is on PyPI. To start, hit this command on your shell,
 
 ..
 
-   git clone https://github.com/junipertcy/simplicial-test.git
+   pip install simplicial-test
 
-The library requires `SageMath`_ and a few PyPI libraries:
 
-..
-
-    pip install -r requirements.txt
-
-To warm up, try:
+Can :code:`d = (2, 3, 1, 1, 4, 2, 2, 1)` and :code:`s = (3, 3, 2, 1, 4, 3)`
+be the joint degree sequence of some simplicial complex? Let's do a simplicial test! Try:
 
 ..
 
-    python is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt
+    python utils/is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt
 
-Or, you may try with a bunch of unit tests (for details, see `tests/`_):
+Look, the program gives an affirmative answer, with a realization in standard output.
+
+As an alternative, you may try with a bunch of unit tests (for details, see `tests/`_):
 
 ..
 
    pytest
 
-This is a deterministic, backtracking-based search algorithm for solving the *simplicial realization problem*.
-If your input joint sequence is not realizable (as a simplicial complex), often we would need
-to traverse the entire search tree, which would take a huge amount of time!
+*simplicial-test* implements a deterministic, backtracking-based search algorithm for solving
+the *simplicial realization problem*. If your input joint sequence is not realizable
+(as a simplicial complex), often we would need to traverse the entire search tree,
+which would take a huge amount of time!
+
 Happily, more than 90% of the input joint sequences lies in the *polynomial regime*,
 which means that they can be solved easily.
 
@@ -66,7 +66,7 @@ from this inspiring `Phys. Rev. E paper`_, which has 551 nodes and 194 facets.
 
 ..
 
-    python is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
+    python utils/is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
 
 Boom! It's rather fast, isn't it?
 
@@ -77,6 +77,7 @@ Related links
 * The implementation of the `Simplicial Configuration Model`_.
 * The graphical `Erdős–Gallai theorem`_.
 * The partition numbers: `A000041`_.
+* To see how the algorithm scales, check out `this benchmark`_.
 
 
 Acknowledgement
@@ -91,4 +92,4 @@ Acknowledgement
 .. _`SageMath`: https://www.sagemath.org/index.html
 .. _`tests/`: tests/
 .. _`Simplicial Configuration Model`: https://github.com/jg-you/scm
-
+.. _`this benchmark`: docs/assets/figures/README.rst
