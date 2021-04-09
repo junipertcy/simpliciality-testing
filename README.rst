@@ -11,7 +11,7 @@ simpliciality-test
    :width: 200
    :alt: logo
 
-*Simplicial-test* implements a recursive algorithm to check whether a joint degree sequence is simplicial.
+:code:`simplicial-test` implements a recursive algorithm to check whether a joint degree sequence is simplicial.
 
 This is the software repository behind the paper:
 
@@ -31,15 +31,25 @@ Read it on: [`arXiv`_].
 
 First steps
 -----------
-*simplicial-test* is on PyPI. To start, hit this command on your shell,
+:code:`simplicial-test` is on PyPI. To start, hit this command on your shell,
 
 ..
 
-   pip install simplicial-test
+    pip install simplicial-test
 
+Please check the docs for `its usage`_ in the Python interactive console.
 
-Can :code:`d = (2, 3, 1, 1, 4, 2, 2, 1)` and :code:`s = (3, 3, 2, 1, 4, 3)`
-be the joint degree sequence of some simplicial complex? Let's do a simplicial test! Try:
+----
+
+Here, we assume you have instead pulled the library from GitHub, via,
+
+..
+
+    git clone https://github.com/junipertcy/simplicial-test.git
+
+And entered the :code:`simplicial-test` folder. Let's ask: Can :code:`d = (2, 3, 1, 1, 4, 2, 2, 1)`
+and :code:`s = (3, 3, 2, 1, 4, 3)` be the joint degree sequence of some simplicial complex?
+Let's do a simplicial test! Try:
 
 ..
 
@@ -51,9 +61,9 @@ As an alternative, you may try with a bunch of unit tests (for details, see `tes
 
 ..
 
-   pytest
+    pytest
 
-*simplicial-test* implements a deterministic, backtracking-based search algorithm for solving
+:code:`simplicial-test` implements a deterministic, backtracking-based search algorithm for solving
 the *simplicial realization problem*. If your input joint sequence is not realizable
 (as a simplicial complex), often we would need to traverse the entire search tree,
 which would take a huge amount of time!
@@ -82,6 +92,13 @@ Related links
 
 Acknowledgement
 ---------------
+The simplicial-test library is inspired and supported by the following great humans,
+Josh Grochow, Jean-Gabriel Young, and Alice Patania.
+
+We want to thank Stefanie Molin (`@stefmolin`_) for their Custom-Colormaps,
+Iacopo Iacopini (`@iaciac`_) for their py-draw-simplicial-complex,
+whose libraries make pretty figures,
+and Austin Benson (`@arbenson`_) for their hypergraph datasets that helped identify bugs in larger systems.
 
 
 .. _`Erdős–Gallai theorem`: https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem
@@ -92,4 +109,8 @@ Acknowledgement
 .. _`SageMath`: https://www.sagemath.org/index.html
 .. _`tests/`: tests/
 .. _`Simplicial Configuration Model`: https://github.com/jg-you/scm
-.. _`this benchmark`: https://docs.netscied.tw/simplicial-test/dataset/benchmark.htm
+.. _`this benchmark`: https://docs.netscied.tw/simplicial-test/dataset/benchmark.html
+.. _`its usage`:
+.. _`@stefmolin`: https://github.com/stefmolin
+.. _`@iaciac`: https://github.com/iaciac
+.. _`@arbenson`: https://github.com/arbenson
