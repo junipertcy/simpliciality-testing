@@ -1,7 +1,7 @@
 Installation
 ============
 
-`simplicial-test` can be installed via PyPI.
+:code:`Simplicial-test` can be installed via PyPI.
 
 .. code:: bash
 

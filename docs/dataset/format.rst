@@ -1,4 +1,4 @@
-Data input format
+Data Input Format
 =================
 
 To run the algorithm, you will need two python lists, one for the sequence of (vertex) degree distribution,

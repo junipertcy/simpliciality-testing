@@ -1,5 +1,5 @@
 =====================================
-The :mod:`simplicial-test` User Guide
+The :mod:`Simplicial-test` User Guide
 =====================================
 
 If you have any questions, please contact tzuchi.yen@colorado.edu.
@@ -36,7 +36,7 @@ If you have any questions, please contact tzuchi.yen@colorado.edu.
 
 Acknowledgements
 ----------------
-The `simplicial-test` library is inspired and supported by the following great humans,
+The :code:`Simplicial-test` library is inspired and supported by the following great humans,
 `Josh Grochow`_, `Jean-Gabriel Young`_, and `Alice Patania`_.
 
 We want to thank

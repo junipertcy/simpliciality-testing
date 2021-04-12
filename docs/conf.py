@@ -141,9 +141,9 @@ htmlhelp_basename = 'simplicial-testdoc'
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
-                       'numpy': ('https://docs.scipy.org/doc/numpy', None),
-                       'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
-                       'matplotlib': ('https://matplotlib.org', None),
+                       'numpy': ('https://numpy.org/doc/stable/', None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+                       'matplotlib': ('https://matplotlib.org/stable/', None),
                        'ipython': ('https://ipython.org/ipython-doc/stable/', None)}
 
 extlinks_fancy = {'doi': (['https://dx.doi.org/{0}',

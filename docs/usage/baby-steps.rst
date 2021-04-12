@@ -1,5 +1,5 @@
-Baby steps
-==========
+How to Use Simplicial-test
+==========================
 
 Base on the heuristic, our first guess is having `[a, c, d]` as the candidate facet.
 However, this configuration makes the non-shielding vertices being only `b` and `e`,

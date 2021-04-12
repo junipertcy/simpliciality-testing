@@ -74,9 +74,9 @@ class Test(SimplexRegistrar):
             self.size_list = self.s_depot.size_list
         self.blocked_sets = []
 
-        self.depth = kwargs.pop("depth", int(len(self.size_list) / 2))
+        self.depth = kwargs.pop("depth", np.infty)
         self.width = kwargs.pop("width", 1e2)
-        self.s_depot.cutoff = kwargs.pop("cutoff", np.infty)
+        self.s_depot.cutoff = kwargs.pop("cutoff", 1e5)
         self.verbose = verbose
         self.current_fids = []
         self.non_simplicial_signal = False
