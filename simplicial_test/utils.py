@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to realize simplicial joint sequences
+# simplicial-test -- a python module to realize simplicial joint sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -129,6 +129,19 @@ def simplify_blocked_sets(bsets):
             else:
                 simplified_bsets += [tuple(set(_bsets))]
     return simplified_bsets
+
+
+def sort_facets(facets):
+    sorted_facets = []
+    for facet in facets:
+        sorted_facets += [tuple(sorted(facet, reverse=False))]
+    sorted_facets = set(sorted_facets)
+    return tuple(sorted(sorted_facets, key=lambda _: [-len(_)] + list(_)))
+
+
+def prune_included_facets(bsets):
+    r"""Alias of simplify_blocked_sets."""
+    return simplify_blocked_sets(bsets)
 
 
 def get_indices_of_k_in_blocked_sets(blocked_sets, k):

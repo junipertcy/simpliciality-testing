@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to realize simplicial joint sequences
+# simplicial-test -- a python module to realize simplicial joint sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -19,7 +19,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from . import validators
-from .enumeration import sort_facets
 from .utils import *
 from .custom_exceptions import NoMoreBalls, SimplicialSignal, GoToNextLevel
 from more_itertools import distinct_combinations
@@ -119,6 +118,7 @@ class Test(SimplexRegistrar):
         level_map[vid] =  vtx index at current view.
 
         """
+        blocked_sets = [_ for _ in blocked_sets if len(_) >= size]
         equiv2vid = defaultdict(list)
         for vid, _ in enumerate(degs):
             if level_map[vid] != -1:

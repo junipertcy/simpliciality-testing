@@ -1,6 +1,8 @@
 How to Use Simplicial-test
 ==========================
 
+[young-construction-2017]_
+
 Base on the heuristic, our first guess is having `[a, c, d]` as the candidate facet.
 However, this configuration makes the non-shielding vertices being only `b` and `e`,
 whose degrees sum to 2. This is implausible because each of the remaining facets has
@@ -57,3 +59,26 @@ doomed to be a subset of `[a, c, d]`.
       - *
       - *
       - *
+
+
+.. tip::
+
+   If you need some actual joint degree sequences to start with
+   (and pretend that you do not know if they are realizable),
+   Prof. Benson has `a nice collection`_ of hypergraph datasets.
+   To use them, download a dataset and apply these utility functions in order.
+
+   #. :func:`simplicial_test.utils.read_hyperedge_list`
+   #. :func:`simplicial_test.utils.prune_included_facets`
+   #. :func:`simplicial_test.utils.compute_joint_seq`
+   #. Now you have the :code:`degree_list` and :code:`size_list` to test!
+
+.. _`a nice collection`: https://www.cs.cornell.edu/~arb/data/
+
+
+
+----
+
+.. [young-construction-2017] Jean-Gabriel Young, Giovanni Petri, Francesco Vaccarino, and Alice Patania,
+   "Construction of and efficient sampling from the simplicial configuration model", Phys.
+   Rev. E 96, 032312 (2017), :doi:`10.1103/PhysRevE.96.032312`, :arxiv:`1705.10298`.

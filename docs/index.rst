@@ -28,7 +28,7 @@ If you have any questions, please contact tzuchi.yen@colorado.edu.
    :maxdepth: 1
    :caption: Module documentation
 
-   src/test
+   src/cores
    src/draw
    src/sample
    src/enumeration

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to realize simplicial joint sequences
+# simplicial-test -- a python module to realize simplicial joint sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -25,14 +25,6 @@ from .custom_exceptions import SimplicialSignal
 from copy import deepcopy
 from itertools import combinations_with_replacement, starmap, product
 from collections import defaultdict
-
-
-def sort_facets(facets):
-    sorted_facets = []
-    for facet in facets:
-        sorted_facets += [tuple(sorted(facet, reverse=False))]
-    sorted_facets = set(sorted_facets)
-    return tuple(sorted(sorted_facets, key=lambda _: [-len(_)] + list(_)))
 
 
 def compute_dpv(facets, n=None, is_sorted=True):

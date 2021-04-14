@@ -2,8 +2,6 @@
   <img src="docs/assets/simplicial-test-logo.png" alt="logo" width=400>
 </div>
 
----
-
 [![python](https://img.shields.io/badge/python-3.8-blue.svg?style=flat)](https://github.com/junipertcy/simplicial-test/blob/master/COPYING)
 [![license](https://img.shields.io/badge/license-LGPL-green.svg?style=flat)](https://github.com/junipertcy/simplicial-test/blob/master/COPYING)
 
@@ -52,9 +50,12 @@ $ python setup.py install  # if you do not want to install it yet, skip this ste
 ```
 
 In the `simplicial-test` folder, 
-there's a useful commandline script that allows you to do the simplicial test (even when it's not installed). 
-In the `simplicial-test` folder, we ask the following: Can `d = (2, 3, 1, 1, 4, 2, 2, 1)`
-and `s = (3, 3, 2, 1, 4, 3)` be the joint degree sequence of some simplicial complex? These integer sequences are hard-coded in `datasets/00_degs.txt` and `datasets/00_sizes.txt`. So, let's do the simplicial test! Try:
+there's a useful command-line script that allows you to do the simplicial test (even when it's not installed). 
+We ask the following: Can `d = (2, 3, 1, 1, 4, 2, 2, 1)`
+and `s = (3, 3, 2, 1, 4, 3)` be the joint degree sequence of some simplicial complex? 
+These integer sequences are hard-coded in `datasets/00_degs.txt` and `datasets/00_sizes.txt`. 
+
+Let's do the simplicial test! Try:
 
 ```sh
 $ python utils/is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt

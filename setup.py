@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to realize simplicial joint sequences
+# simplicial-test -- a python module to realize simplicial joint sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -39,7 +39,7 @@ def get_long_description():
 setup(
     name='simplicial-test',
     version=__version__,
-    description='Python module to realize simplicial joint degree sequences',
+    description='Pure Python package to realize simplicial complexes from prescribed joint degree sequences',
     long_description=get_long_description(),
     long_description_content_type='text/x-rst',
     author='Tzu-Chi Yen',

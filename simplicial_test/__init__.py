@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to realize simplicial joint sequences
+# simplicial-test -- a python module to realize simplicial joint sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -21,7 +21,7 @@
 """``simplicial_test`` - Algorithm to check whether a joint sequence of degree/size distributions is simplicial
 ---------------------------------------------------------------------------------------------------------------
 
-This module contains a greedy algorithm for checking simpliciality.
+This module contains a tree-search algorithm for checking simpliciality.
 
 .. note::
 
@@ -45,8 +45,8 @@ __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '0.92.0'
-__release__ = '0.92.0'
+__version__ = '0.93.0'
+__release__ = '0.93.0'
 
 #  mark the class as not to be collected as pytest tests
 Test.__test__ = False
