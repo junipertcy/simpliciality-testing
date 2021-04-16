@@ -3,15 +3,15 @@
 
 #### ESSENTIAL LIBRARIES FOR MAIN FUNCTIONALITY ####
 more_itertools>=8.7.0
-numpy>=1.16.2
+numpy>=1.20.0
 matplotlib>=3.0.0
-scipy>=1.2.1
 click>=7.1.2
 
+#### USED BY THE SAMPLE MODULE ####
 # hitting set solver
 # python-sat[pblib,aiger]
 
 #### TESTING-RELATED PACKAGES ####
 # We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
 # the tests.  With this here, you can run the tests with `pytest` from the base directory.
-pytest
+pytest>=6.2.2

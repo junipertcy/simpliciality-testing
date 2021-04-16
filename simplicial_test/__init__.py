@@ -32,7 +32,6 @@ from .Test import *
 from .utils import *
 from .enumeration import *
 from .sample import *
-from .cm_count import *
 from .draw import *
 
 __package__ = 'simplicial_test'
@@ -62,7 +61,6 @@ __all__ = [
     "get_partition",
     "sort_facets",
     "get_relabeled_facets",
-    "compute_entropy",
     "if_facets_simplicial",
     "gen_joint_sequence_from_sizes",
     "accel_asc",
