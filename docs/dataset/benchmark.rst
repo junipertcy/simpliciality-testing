@@ -4,24 +4,36 @@ We suggested in the paper that more than half of the (realizable) joint degree s
 falls in the "polynomial regime". How does this hold in real-world data? Well, the answer is likely affirmative.
 
 .. note::
-   We use :math:`\tau_{\text{conv.}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
+   We use :math:`\tau_{\text{conv}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
    is necessary to determine if the input integer sequences can be realized as a simplicial complex.
-   We deem a joint sequence polynomial if :math:`\tau_{\text{conv.}} = 0`.
+   We deem a joint sequence polynomial if :math:`\tau_{\text{conv}} = 0`.
 
    In that case, no backtracking (:math:`\tau_{\text{b}} = 0`) and
    no rejection  (:math:`\tau_{\text{r}} = 0`) is necessary,
    the algorithm either rejects simpliciality immediately or finds an instance in linear time.
 
-.. list-table:: TABLE. Empirical joint degree sequences tested with the :code:`Simplicial-test`.
+The results are measured with :code:`simplicial-test v1.0`,
+for a machine with `Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`_ (6 cores & 12 threads) and 64GB 2667MHz DDR4 memory.
+
+
+.. _`Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`: https://ark.intel.com/content/www/us/en/ark/products/134905/intel-core-i7-8700b-processor-12m-cache-up-to-4-60-ghz.html
+
+
+**TABLE---Summary of the empirical joint degree sequences.** Shown are the convergence time :math:`\tau_\text{conv}`,
+wall time, number of edges :math:`E`, number of nodes (facets) :math:`n` (:math:`m`),
+maximal/minimal facet size, and maximal/minimal node degree.
+
+.. list-table::
    :widths: 20 10 10 10 10 10 10 10 10
+   :align: left
    :header-rows: 1
 
    * - Dataset
-     - :math:`\tau_\text{conv.}`
+     - :math:`\tau_\text{conv}`
      - Wall time
-     - E
-     - m
-     - n
+     - :math:`E`
+     - :math:`m`
+     - :math:`n`
      - :math:`(\textbf{s}_\text{max}, \textbf{s}_\text{min})`
      - :math:`(\textbf{d}_\text{max}, \textbf{d}_\text{min})`
      - Reference
@@ -80,8 +92,8 @@ falls in the "polynomial regime". How does this hold in real-world data? Well, t
      - (90, 2)
      - [mastrandrea-contact-2015]_
    * - contact primary school
-     - 115934
-     - 11min 19s
+     - 61465
+     - 7min 22s  [*]
      - 20615
      - 8010
      - 242
@@ -99,7 +111,7 @@ falls in the "polynomial regime". How does this hold in real-world data? Well, t
      - [chodrow-hypergraph-2021]_
    * - mathoverflow answers
      - **0**
-     - 7h 42min
+     - 6h 19min  [*]
      - 131406
      - 5296
      - 73851
@@ -124,6 +136,11 @@ falls in the "polynomial regime". How does this hold in real-world data? Well, t
      - (399, 2)
      - (3824, 1)
      - [chodrow-hypergraph-2021]_
+
+[*] We also run on a `Raspberry Pi 4 (8GB)`_ for the "contact primary school" dataset, the wall time is .
+However, for the "mathoverflow answers" dataset, MemoryError is raised (it has a memory use peak around 32GB).
+
+.. _`Raspberry Pi 4 (8GB)`: https://www.raspberrypi.org/products/raspberry-pi-4-model-b/specifications/
 
 ----
 

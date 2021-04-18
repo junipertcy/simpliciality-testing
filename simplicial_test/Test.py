@@ -204,14 +204,13 @@ class Test(SimplexRegistrar):
         if not passed:
             return passed, wanting_degs  # wanting_degs: Str = "short explanation of why the candidate facet fails."
 
-        blocked_sets = simplify_blocked_sets(self.blocked_sets)
-        for blocked_set in blocked_sets:
+        for blocked_set in self.blocked_sets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):
                 return False, "Rejected b/c the remaining facets are doomed to fail the no-inclusion constraint."
 
         if Counter(wanting_degs)[len(sizes)] != 0:
             passed, (wanting_degs, sizes, collected_facets, exempt_vids) = validators.validate_reduced_seq(
-                wanting_degs, sizes, [facet], blocked_sets, verbose=self.verbose
+                wanting_degs, sizes, [facet], self.blocked_sets, verbose=self.verbose
             )
             if not passed:
                 return False, "Rejected while reducing the sequences"
@@ -224,7 +223,7 @@ class Test(SimplexRegistrar):
             exempt_vids = []
             collected_facets = []
 
-        filtered = filter_blocked_facets([facet] + blocked_sets, exempt_vids)
+        filtered = filter_blocked_facets([facet] + self.blocked_sets, exempt_vids)
         blocked_sets = sort_facets(self.blocked_sets)
 
         sorted_wanting_degs = sorted(wanting_degs, reverse=True)
@@ -263,6 +262,7 @@ class Test(SimplexRegistrar):
                 if not validators.validate_data(degree_list, size_list):
                     self._rollback(self._level - 1)
                 else:
+                    blocked_sets = simplify_blocked_sets(blocked_sets)
                     self.degree_list, self.size_list, self.blocked_sets = degree_list, size_list, blocked_sets
             except NoMoreBalls:
                 if self._level == 1:
@@ -281,13 +281,12 @@ class Test(SimplexRegistrar):
                 self.s_depot.valid_trials[ind] = None
 
     def _assemble_simplicial_facets(self, seed_facets):
-        msg = seed_facets
         if self._level != 1:
             for lv in np.arange(self._level - 1, 0, -1):
-                facets = transform_facets(msg, self.s_depot.mappers[lv][1], to="l-1")
+                facets = transform_facets(seed_facets, self.s_depot.mappers[lv][1], to="l-1")
                 facets = [self.s_depot.exempts[lv] + list(s) for s in facets]
-                msg = self.s_depot.candidates[lv] + facets + self.s_depot.collects[lv]
-        return tuple(sort_callback(msg) + self.facets_to_append)
+                seed_facets = self.s_depot.candidates[lv] + facets + self.s_depot.collects[lv]
+        return tuple(sort_callback(seed_facets) + self.facets_to_append)
 
     def __mark(self, simplicial, facets):
         self.s_depot.simplicial = simplicial
