@@ -74,7 +74,7 @@ class Test(SimplexRegistrar):
         self.blocked_sets = []
 
         self.depth = kwargs.pop("depth", np.infty)
-        self.width = kwargs.pop("width", 1e2)
+        self.width = kwargs.pop("width", 1e3)
         self.s_depot.cutoff = kwargs.pop("cutoff", 1e5)
         self.verbose = verbose
         self.current_fids = []
@@ -118,7 +118,7 @@ class Test(SimplexRegistrar):
         level_map[vid] =  vtx index at current view.
 
         """
-        blocked_sets = [_ for _ in blocked_sets if len(_) >= size]
+        # blocked_sets = [_ for _ in blocked_sets if len(_) >= size]
         equiv2vid = defaultdict(list)
         for vid, _ in enumerate(degs):
             if level_map[vid] != -1:
@@ -204,13 +204,14 @@ class Test(SimplexRegistrar):
         if not passed:
             return passed, wanting_degs  # wanting_degs: Str = "short explanation of why the candidate facet fails."
 
-        for blocked_set in self.blocked_sets:
+        blocked_sets = simplify_blocked_sets(self.blocked_sets)
+        for blocked_set in blocked_sets:
             if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):
                 return False, "Rejected b/c the remaining facets are doomed to fail the no-inclusion constraint."
 
         if Counter(wanting_degs)[len(sizes)] != 0:
             passed, (wanting_degs, sizes, collected_facets, exempt_vids) = validators.validate_reduced_seq(
-                wanting_degs, sizes, [facet], self.blocked_sets, verbose=self.verbose
+                wanting_degs, sizes, [facet], blocked_sets, verbose=self.verbose
             )
             if not passed:
                 return False, "Rejected while reducing the sequences"
@@ -223,7 +224,7 @@ class Test(SimplexRegistrar):
             exempt_vids = []
             collected_facets = []
 
-        filtered = filter_blocked_facets([facet] + self.blocked_sets, exempt_vids)
+        filtered = filter_blocked_facets([facet] + blocked_sets, exempt_vids)
         blocked_sets = sort_facets(self.blocked_sets)
 
         sorted_wanting_degs = sorted(wanting_degs, reverse=True)
@@ -262,7 +263,6 @@ class Test(SimplexRegistrar):
                 if not validators.validate_data(degree_list, size_list):
                     self._rollback(self._level - 1)
                 else:
-                    blocked_sets = simplify_blocked_sets(blocked_sets)
                     self.degree_list, self.size_list, self.blocked_sets = degree_list, size_list, blocked_sets
             except NoMoreBalls:
                 if self._level == 1:

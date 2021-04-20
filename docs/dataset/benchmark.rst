@@ -19,7 +19,8 @@ for a machine with `Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`_ (6 cores & 12 thr
 .. _`Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`: https://ark.intel.com/content/www/us/en/ark/products/134905/intel-core-i7-8700b-processor-12m-cache-up-to-4-60-ghz.html
 
 
-**TABLE---Summary of the empirical joint degree sequences.** Shown are the convergence time :math:`\tau_\text{conv}`,
+**TABLE---Summary of the joint degree sequences derived from empirical datasets.**
+Shown are the convergence time :math:`\tau_\text{conv}`,
 wall time, number of edges :math:`E`, number of nodes (facets) :math:`n` (:math:`m`),
 maximal/minimal facet size, and maximal/minimal node degree.
 
@@ -39,7 +40,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - Reference
    * - crime
      - **0**
-     - 903 ms  [*]
+     - 621 ms
      - 805
      - 194
      - 551
@@ -48,7 +49,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      -
    * - flower and pollinator
      - **0**
-     - 338 ms  [*]
+     - 295 ms
      - 1206
      - 91
      - 679
@@ -57,7 +58,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      -
    * - human diseasome
      - **0**
-     - 2.39 s  [*]
+     - 2.1 s
      - 1416
      - 752
      - 1100
@@ -66,7 +67,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      -
    * - senate committees
      - **0**
-     - 1.78 s
+     - 1.57 s
      - 5143
      - 275
      - 282
@@ -75,7 +76,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [stewart-congressional-2017]_
    * - house committees
      - **0**
-     - 6.64 s
+     - 6.53 s
      - 11640
      - 302
      - 1290
@@ -84,7 +85,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [stewart-congressional-2017a]_
    * - contact high school
      - 3
-     - 2min 12s [*]
+     - 1min 59s
      - 11770
      - 4862
      - 327
@@ -101,7 +102,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (174, 20)
      - [stehlé-high-2011]_
    * - senate bills
-     - too slow
+     - DNF
      - ??
      - 92876
      - 3599
@@ -119,7 +120,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (169, 1)
      - [veldt-minimizing-2020]_
    * - walmart trips
-     - too slow
+     - DNF
      - ???
      - 447347
      - 63687
@@ -128,7 +129,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (5412, 1)
      - [amburg-clustering-2020]_
    * - house bills
-     - too slow
+     - DNF
      - ???
      - 927075
      - 23267
@@ -137,8 +138,10 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (3824, 1)
      - [chodrow-hypergraph-2021]_
 
-[*] We also run on a `Raspberry Pi 4 (8GB)`_ for the "contact primary school" dataset, the wall time is .
+[*] We also run on a `Raspberry Pi 4 (8GB)`_ for the "contact primary school" dataset, the wall time is 34min 30s.
 However, for the "mathoverflow answers" dataset, MemoryError is raised (it has a memory use peak around 32GB).
+
+DNF: Did Not Finish under the default cutoff threshold.
 
 .. _`Raspberry Pi 4 (8GB)`: https://www.raspberrypi.org/products/raspberry-pi-4-model-b/specifications/
 

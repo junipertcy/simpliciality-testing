@@ -29,8 +29,8 @@ def test_all_ones():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_all_ones_on_deg_seq():
@@ -40,8 +40,8 @@ def test_all_ones_on_deg_seq():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_trim_ones_first_true():
@@ -51,8 +51,8 @@ def test_trim_ones_first_true():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_trim_ones_first_false():
@@ -62,8 +62,8 @@ def test_trim_ones_first_false():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_1():
@@ -73,8 +73,8 @@ def test_simplicial_1():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_2():
@@ -84,8 +84,8 @@ def test_simplicial_2():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_3():
@@ -95,8 +95,8 @@ def test_simplicial_3():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_4():
@@ -106,8 +106,8 @@ def test_simplicial_4():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_5():
@@ -117,8 +117,8 @@ def test_simplicial_5():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_6():
@@ -128,8 +128,8 @@ def test_simplicial_6():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_7():
@@ -139,8 +139,8 @@ def test_simplicial_7():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_8():
@@ -150,8 +150,8 @@ def test_simplicial_8():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_9():
@@ -162,8 +162,8 @@ def test_simplicial_9():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_10():
@@ -174,8 +174,8 @@ def test_simplicial_10():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_11():
@@ -186,8 +186,8 @@ def test_simplicial_11():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_12():
@@ -198,8 +198,8 @@ def test_simplicial_12():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_13():
@@ -210,8 +210,8 @@ def test_simplicial_13():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_14():
@@ -221,8 +221,8 @@ def test_simplicial_14():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_15():
@@ -232,8 +232,8 @@ def test_simplicial_15():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_16():
@@ -243,8 +243,8 @@ def test_simplicial_16():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_17():
@@ -254,8 +254,8 @@ def test_simplicial_17():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_18():
@@ -268,8 +268,8 @@ def test_simplicial_18():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_19():
@@ -282,8 +282,8 @@ def test_simplicial_19():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_20():
@@ -296,8 +296,8 @@ def test_simplicial_20():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_21():
@@ -308,8 +308,8 @@ def test_simplicial_21():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_22():
@@ -320,8 +320,8 @@ def test_simplicial_22():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_23_valid_trials():
@@ -331,8 +331,8 @@ def test_simplicial_23_valid_trials():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_simplicial_24_valid_trials():
@@ -342,8 +342,8 @@ def test_simplicial_24_valid_trials():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_time_consuming_case():
@@ -374,5 +374,5 @@ def test_time_consuming_case():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)

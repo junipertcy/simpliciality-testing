@@ -30,8 +30,8 @@ def test_crime_dataset():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_pollinator_dataset():
@@ -42,8 +42,8 @@ def test_pollinator_dataset():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
 def test_diseasome_dataset():
@@ -54,5 +54,5 @@ def test_diseasome_dataset():
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
     assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(size_list, reverse=True)
-    assert joint_seqs[1] == sorted(degree_list, reverse=True)
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)

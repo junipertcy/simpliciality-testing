@@ -298,7 +298,7 @@ def compute_joint_seq(facets) -> (list, list):
         for vertex_id in facet:
             degs[vertex_id] += 1
 
-    return sorted(sizes, reverse=True), sorted(degs, reverse=True)
+    return sorted(degs, reverse=True), sorted(sizes, reverse=True)
 
 
 def if_facets_simplicial(facets) -> bool:

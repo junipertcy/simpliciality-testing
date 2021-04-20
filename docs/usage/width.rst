@@ -1,7 +1,7 @@
 :code:`width` (to explore)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default, :code:`width = 10^2`.
+By default, :math:`\text{width} = 10^3`.
 
 
 How to set :code:`width`?

@@ -27,41 +27,66 @@ First steps
 $ pip install simplicial-test
 ```
 
-In your Python console, you may use `Simplicial-test` with the following:
+Here's a typical *simplicial realization problem*: Can `d = (3, 3, 2, 2, 1, 1, 1, 1)`
+and `s = (4, 3, 2, 2, 2, 1)` be the joint degree sequence of some simplicial complex? 
+
+In your Python console, `simplicial-test` is invoked using:
 
 ```python
->>> from simplicial_test import Test
+>>> from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
 >>> degree_list = [3, 3, 2, 2, 1, 1, 1, 1]
 >>> size_list = [4, 3, 2, 2, 2, 1]
 >>> st = Test(degree_list, size_list)  # visit the docs for other options, like setting a cutoff to give up.
 >>> is_simplicial, facets = st.is_simplicial()  # actual computation
->>> is_simplicial
-True
+>>> assert is_simplicial is True
+>>> assert if_facets_simplicial(facets) is True
+>>> assert compute_joint_seq(facets) == (sorted(degree_list, reverse=True), sorted(size_list, reverse=True))
 >>> facets
 ((0, 1, 2, 4), (0, 1, 3), (0, 5), (1, 6), (2, 3), (7,))
 ```
 
-Alternatively, you may install `Simplicial-test` from source:
+Other steps
+-----------
+Alternatively, you may install `Simplicial-test` from the source:
 
-```sh
+```shell
 $ git clone https://github.com/junipertcy/simplicial-test.git
 $ cd simplicial-test
 $ python setup.py install  # if you do not want to install it yet, skip this step.
 ```
 
 In the `simplicial-test` folder, 
-there's a useful command-line script that allows you to do the simplicial test (even when it's not installed). 
-We ask the following: Can `d = (2, 3, 1, 1, 4, 2, 2, 1)`
-and `s = (3, 3, 2, 1, 4, 3)` be the joint degree sequence of some simplicial complex? 
-These integer sequences are hard-coded in `datasets/00_degs.txt` and `datasets/00_sizes.txt`. 
+there's a useful script that allows you to do the simplicial test (even when it's not installed), 
+by hard-coded integer sequences in [`datasets/00_degs.txt`](datasets/00_degs.txt) 
+and [`datasets/00_sizes.txt`](datasets/00_sizes.txt) as the input.
 
-Let's do the simplicial test! Try:
+```shell
+$ python utils/is_simplicial.py --help
 
-```sh
-$ python utils/is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt
+Usage: is_simplicial.py [OPTIONS]
+
+Options:
+  -k, --degree_seq_file FILENAME  Path to degree sequence file.
+  -s, --size_seq_file FILENAME    Path to size sequence file.
+  -c, --cutoff INTEGER            Cutoff (max. steps) to the search.
+  -w, --width INTEGER             Search width (see the docs).
+  -d, --depth INTEGER             Backtrack depth (see the docs).
+  --verbose                       Turn on the verbose mode.
+  --help                          Show this message and exit.
+
+
 ```
 
-Look, the program gives an affirmative answer, with a realization in standard output.
+To run the simplicial test on the command line:
+```sh
+$ python utils/is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt
+
+Yes, the joint degree sequence is simplicial. 
+The complex is: ((0, 1, 2, 3), (0, 1, 4), (0, 1, 5), (0, 2, 4), (3, 6), (7,))
+
+```
+
+Look, the program gives an affirmative answer, with a realization in the standard output.
 
 You may also try with a bunch of unit tests (for details, see [tests/](tests/)), by running:
 
@@ -69,7 +94,7 @@ You may also try with a bunch of unit tests (for details, see [tests/](tests/)),
 $ pytest
 ```
     
-Now you have sensed that `Simplicial-test` implements a search algorithm for solving
+Now you have sensed that `simplicial-test` implements a search algorithm for solving
 the *simplicial realization problem*. If your input joint sequence is not realizable
 (as a simplicial complex), we may need to traverse the entire search tree,
 which would take a huge amount of time!
@@ -77,8 +102,10 @@ which would take a huge amount of time!
 Happily, more than 90% of the input joint sequences lies in the *polynomial regime* (check out the paper),
 which means that they can be solved easily.
 
-For example, you can assemble a simplicial complex from the joint sequence of the [crime network dataset](https://github.com/jg-you/scm/blob/master/datasets/crime_facet_list.txt),
-from this inspiring [Phys. Rev. E paper](https://doi.org/10.1103/PhysRevE.96.032312), which has 551 nodes and 194 facets.
+For example, you can assemble a simplicial complex from the joint sequence
+of the [crime network dataset](https://github.com/jg-you/scm/blob/master/datasets/crime_facet_list.txt),
+from this inspiring [Phys. Rev. E paper](https://doi.org/10.1103/PhysRevE.96.032312), 
+which has 551 nodes and 194 facets.
 
 ```sh
 $ python utils/is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
