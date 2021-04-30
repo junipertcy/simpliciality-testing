@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # simplicial-test -- a python module to realize simplicial joint sequences
@@ -19,7 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-from simplicial_test import *
+from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
 
 
 def test_all_ones():

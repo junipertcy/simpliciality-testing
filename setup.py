@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # simplicial-test -- a python module to realize simplicial joint sequences
@@ -17,13 +17,24 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+""" Simplicial-test realizes a simplicial complex from a prescribed joint degree sequence (when feasible).
+
+Simplicial-test provides a deterministic, backtracking-based search algorithm for the simplicial realization problem.
+
+This is the software repository behind the paper:
+
+- Construction of simplicial complexes with prescribed joint degree sequences, Tzu-Chi Yen (2021).
+
+  Read it on arXiv: https://junipertcy.info/
+
+All Simplicial-test sdists and wheels distributed on PyPI are LGPLv3 licensed.
+"""
 
 from os.path import realpath, dirname, join
-import pathlib
-
-
 from setuptools import setup, find_packages
 from simplicial_test import __version__
+
+DOCLINES = (__doc__ or '').split("\n")
 
 PROJECT_ROOT = dirname(realpath(__file__))
 
@@ -33,27 +44,24 @@ with open(REQUIREMENTS_FILE) as f:
     install_reqs = f.read().splitlines()
 
 install_reqs.append('setuptools')
-
-here = pathlib.Path(__file__).parent.resolve()
-long_description = (here / 'README.md').read_text(encoding='utf-8')
-
+# install_reqs.append('numpy')
 
 setup(
     name='simplicial-test',
     version=__version__,
-    description='Python package to realize simplicial complexes from prescribed joint degree sequences',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
+    description=DOCLINES[0],
+    long_description="\n".join(DOCLINES[2:]),
     author='Tzu-Chi Yen',
-    author_email='tzuchi@netscied.tw',
+    author_email='tzuchi.yen@colorado.edu',
     license='LGPLv3',
-    packages=find_packages(),
+    package_dir={"": "."},
+    packages=find_packages(where="."),
     package_data={
         'simplicial_test': [
             'COPYING',
             'COPYING.LESS',
             'README.rst',
-            'requirements.txt'
+            'requirements.txt',
         ]},
     include_package_data=True,
     install_requires=install_reqs,
@@ -62,8 +70,9 @@ setup(
         'docs': ['sphinx']
     },
     url='https://github.com/junipertcy/simplicial-test',
-    platforms='any',
-    python_requires='>=3.7, <4',
+    platforms=["Windows", "Linux", "Solaris", "Mac OS-X", "Unix"],
+    test_suite='pytest',
+    python_requires='>=3.7',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
@@ -92,8 +101,9 @@ setup(
         'realizability',
     ],
     project_urls={
-        'Bug Reports': 'https://github.com/junipertcy/simplicial-test/issues',
+        'Bug Tracker': 'https://github.com/junipertcy/simplicial-test/issues',
         'Forum': 'https://github.com/junipertcy/simplicial-test/discussions',
-        'User Guide': 'https://docs.netscied.tw/simplicial-test/index.html'
+        'Source Code': 'https://github.com/junipertcy/simplicial-test',
+        'Documentation': 'https://docs.netscied.tw/simplicial-test/index.html'
     },
 )

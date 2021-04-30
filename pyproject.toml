@@ -1,3 +1,28 @@
+[tool.poetry]
+name = "simplicial-test"
+version = "0.99.2"
+description = "Simplicial-test realizes a simplicial complex from a prescribed joint degree sequence (when feasible)."
+authors = ["Tzu-Chi Yen <tzuchi.yen@colorado.edu>"]
+license = "LGPLv3"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+more-itertools = "^8.7.0"
+numpy = "^1.20.0"
+matplotlib = "^3.0.0"
+click = "^7.1.2"
+
+[tool.poetry.dev-dependencies]
+poetry = "^1.1.6"
+pytest = "^6.2.2"
+tox = "^3.23.0"
+sphinx-markdown-tables = "^0.0.15"
+sphinx-rtd-theme = "^0.5.2"
+recommonmark = "^0.7.1"
+numpydoc = "^1.1.0"
+mathjax = "^0.1.2"
+Sphinx = "^3.5.4"
+
 [build-system]
-requires = ["setuptools>=45", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

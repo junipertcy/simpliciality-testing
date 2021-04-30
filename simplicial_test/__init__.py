@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # simplicial-test -- a python module to realize simplicial joint sequences
@@ -44,8 +44,8 @@ __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '0.99.1'
-__release__ = '0.99.1'
+__version__ = '0.99.4'
+__release__ = '0.99.4'
 
 #  mark the class as not to be collected as pytest tests
 Test.__test__ = False

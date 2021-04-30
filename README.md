@@ -1,8 +1,8 @@
 <div align="left">
-  <img src="docs/assets/simplicial-test-logo.png" alt="logo" width=400>
+  <img src="https://github.com/junipertcy/simplicial-test/blob/main/docs/assets/simplicial-test-logo.png?raw=true" alt="logo" width=400>
 </div>
 
-[![python](https://img.shields.io/badge/python-3.8-blue.svg?style=flat)](https://github.com/junipertcy/simplicial-test/blob/master/COPYING)
+[![python](https://img.shields.io/badge/pypi/pyversions/simplicial-test?style=flat)](https://test.pypi.org/project/simplicial-test/0.99.1/)
 [![license](https://img.shields.io/badge/license-LGPL-green.svg?style=flat)](https://github.com/junipertcy/simplicial-test/blob/master/COPYING)
 
 
@@ -33,20 +33,20 @@ and `s = (4, 3, 2, 2, 2, 1)` be the joint degree sequence of some simplicial com
 In your Python console, `simplicial-test` is invoked using:
 
 ```python
->>> from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
->>> degree_list = [3, 3, 2, 2, 1, 1, 1, 1]
->>> size_list = [4, 3, 2, 2, 2, 1]
->>> st = Test(degree_list, size_list)  # visit the docs for other options, like setting a cutoff to give up.
->>> is_simplicial, facets = st.is_simplicial()  # actual computation
->>> assert is_simplicial is True
->>> assert if_facets_simplicial(facets) is True
->>> assert compute_joint_seq(facets) == (sorted(degree_list, reverse=True), sorted(size_list, reverse=True))
->>> facets
+>> > from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
+>> > degree_list = [3, 3, 2, 2, 1, 1, 1, 1]
+>> > size_list = [4, 3, 2, 2, 2, 1]
+>> > st = Test(degree_list, size_list)  # visit the docs for other options, like setting a cutoff to give up.
+>> > is_simplicial, facets = st.is_simplicial()  # actual computation
+>> > assert is_simplicial is True
+>> > assert if_facets_simplicial(facets) is True
+>> > assert compute_joint_seq(facets) == (sorted(degree_list, reverse=True), sorted(size_list, reverse=True))
+>> > facets
 ((0, 1, 2, 4), (0, 1, 3), (0, 5), (1, 6), (2, 3), (7,))
 ```
 
-Other steps
------------
+Command-line Utility, Scalability and Tests 
+-------------------------------------------
 Alternatively, you may install `Simplicial-test` from the source:
 
 ```shell
@@ -88,13 +88,7 @@ The complex is: ((0, 1, 2, 3), (0, 1, 4), (0, 1, 5), (0, 2, 4), (3, 6), (7,))
 
 Look, the program gives an affirmative answer, with a realization in the standard output.
 
-You may also try with a bunch of unit tests (for details, see [tests/](tests/)), by running:
-
-```sh
-$ pytest
-```
-    
-Now you have sensed that `simplicial-test` implements a search algorithm for solving
+`Simplicial-test` implements a search algorithm for solving
 the *simplicial realization problem*. If your input joint sequence is not realizable
 (as a simplicial complex), we may need to traverse the entire search tree,
 which would take a huge amount of time!
@@ -115,7 +109,13 @@ Boom! It's rather fast, isn't it?
 
 Lastly, remember to check out [the docs](https://docs.netscied.tw/simplicial-test/index.html) for the full documentation!
 
+### Development
+`Simplicial-test` uses [poetry](https://python-poetry.org/) for packaging 
+and [tox](https://tox.readthedocs.io/en/latest/) for testing. 
+Once you have these two libraries installed, 
+you can run `tox` to standardize testing on various Python versions (cf. [tox.ini](./tox.ini)) 
 
+You may also test with your local environment (for details, see [tests/](tests/)), by running `pytest`.
 
 Related links
 -------------

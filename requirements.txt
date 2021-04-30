@@ -11,7 +11,3 @@ click>=7.1.2
 # hitting set solver
 # python-sat[pblib,aiger]
 
-#### TESTING-RELATED PACKAGES ####
-# We'll use pytest to run our tests; this isn't really necessary to run the code, but it is to run
-# the tests.  With this here, you can run the tests with `pytest` from the base directory.
-# pytest>=6.2.2
