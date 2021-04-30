@@ -152,11 +152,11 @@ def get_indices_of_k_in_blocked_sets(blocked_sets, k):
     return indices
 
 
-def transform_facets(facets, mapping, to="l+1") -> list:
+def transform_facets(facets, mapping, to="l+1") -> set:
     if to == "l-1":
-        return list(map(lambda x: tuple(map(lambda y: mapping[y], x)), facets))
+        return set(map(lambda x: tuple(map(lambda y: mapping[y], x)), facets))
     elif to == "l+1":
-        _facets = []
+        _facets = set()
         for facet in facets:
             transformed_facet = []
             for vtx in facet:
@@ -165,7 +165,7 @@ def transform_facets(facets, mapping, to="l+1") -> list:
                 except KeyError:
                     pass
             if len(transformed_facet) > 0:
-                _facets += [transformed_facet]
+                _facets.add(tuple(sorted(transformed_facet)))
         return _facets
     else:
         raise ValueError(f"data content to={to} not understood")

@@ -21,8 +21,17 @@
 from . import validators
 from .utils import *
 from .custom_exceptions import NoMoreBalls, SimplicialSignal, GoToNextLevel
-from more_itertools import distinct_combinations as combinations
 from copy import deepcopy
+
+try:
+    from sage.all import Combinations as combinations
+except ImportError:
+    from more_itertools import distinct_combinations as combinations
+else:
+    import sys
+
+    sys.setrecursionlimit(100000)
+
 
 
 class Test(SimplexRegistrar):
@@ -245,7 +254,7 @@ class Test(SimplexRegistrar):
     def is_simplicial(self):
         if sum(self.size_list) == 0:
             return True, self.__mark(True, self._assemble_simplicial_facets(self.fids2facets()))
-        if not validators.validate_data(self.degree_list, self.size_list):
+        if not validators.preprocess(self.degree_list, self.size_list):
             return False, self.__mark(False, tuple())
         while True:
             self._level += 1
@@ -260,10 +269,11 @@ class Test(SimplexRegistrar):
                 return True, self.__mark(True, self._assemble_simplicial_facets(e.message))
             except GoToNextLevel as e:
                 degree_list, size_list, blocked_sets = e.message
-                if not validators.validate_data(degree_list, size_list):
+                if not validators.preprocess(degree_list, size_list):
                     self._rollback(self._level - 1)
                 else:
-                    self.degree_list, self.size_list, self.blocked_sets = degree_list, size_list, blocked_sets
+                    self.degree_list, self.size_list = degree_list, size_list
+                    self.blocked_sets = sort_facets(blocked_sets)
             except NoMoreBalls:
                 if self._level == 1:
                     return False, self.__mark(False, tuple())

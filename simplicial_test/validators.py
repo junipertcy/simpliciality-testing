@@ -21,8 +21,10 @@
 from .utils import *
 
 
-def validate_data(sorted_d, sorted_s):
-    if len(sorted_d) > 0 and np.max(sorted_d) > len(sorted_s):
+def preprocess(sorted_d, sorted_s):
+    if np.max(sorted_d) > len(sorted_s):
+        return False
+    if len(sorted_s) > 1 and np.max(sorted_s) >= len(sorted_d):
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False

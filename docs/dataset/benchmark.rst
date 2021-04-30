@@ -112,7 +112,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [chodrow-hypergraph-2021]_
    * - mathoverflow answers
      - **0**
-     - 6h 19min  [*]
+     - 6h 13min  [*]
      - 131406
      - 5296
      - 73851
@@ -129,8 +129,8 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (5412, 1)
      - [amburg-clustering-2020]_
    * - house bills
-     - DNF
-     - ???
+     - 848
+     - 52h 57min
      - 927075
      - 23267
      - 1494

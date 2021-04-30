@@ -44,8 +44,8 @@ __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '0.99.0'
-__release__ = '0.99.0'
+__version__ = '0.99.1'
+__release__ = '0.99.1'
 
 #  mark the class as not to be collected as pytest tests
 Test.__test__ = False
@@ -64,11 +64,11 @@ __all__ = [
     "if_facets_simplicial",
     "gen_joint_sequence_from_sizes",
     "accel_asc",
-    "NoMoreBalls",
     "draw_landscape",
     "draw_block",
     "read_hyperedge_list",
     "simplify_blocked_sets",
+    "prune_included_facets",
     "__author__",
     "__URL__",
     "__version__",
