@@ -108,9 +108,8 @@ def validate_nonshielding(curent_sizes, wanting_degs, non_shielding):
         _ = [dummy - 1 for dummy in curent_sizes]
         if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
             return False
-        if np.count_nonzero(shielding) == _[0]:  # There must be at least 2 facets that remain to be chosen.
-            if Counter(non_shielding)[1] == 0:
-                return True
+        if _[0] > np.count_nonzero(shielding):
+            return True
     return False  # safe!
 
 

@@ -44,7 +44,6 @@ with open(REQUIREMENTS_FILE) as f:
     install_reqs = f.read().splitlines()
 
 install_reqs.append('setuptools')
-# install_reqs.append('numpy')
 
 setup(
     name='simplicial-test',
