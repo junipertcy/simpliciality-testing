@@ -33,7 +33,6 @@ else:
     sys.setrecursionlimit(100000)
 
 
-
 class Test(SimplexRegistrar):
     r"""Base class for SimplicialCheck.
 
@@ -300,9 +299,10 @@ class Test(SimplexRegistrar):
 
     def __mark(self, simplicial, facets):
         self.s_depot.simplicial = simplicial
-        self.s_depot.facets = facets
+        self.s_depot.facets = sort_facets(facets)
         del self.s_depot.valid_trials
-        return facets
+        del self.s_depot.explored
+        return self.s_depot.facets
 
     def _rollback(self, level):
         if level == 0:

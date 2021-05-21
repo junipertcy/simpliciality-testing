@@ -2,7 +2,9 @@
 The :mod:`Simplicial-test` User Guide
 =====================================
 
-If you have any questions, please contact tzuchi.yen@colorado.edu.
+We use :code:`simplicial-test` to study the realizability of simplicial complexes
+with a given pair of integer sequences,
+representing the node degree distribution and facet size distribution, respectively.
 
 .. toctree::
    :maxdepth: 2
@@ -33,10 +35,12 @@ If you have any questions, please contact tzuchi.yen@colorado.edu.
    src/sample
    src/enumeration
 
+Please contact Tzu-Chi Yen <tzuchi.yen@colorado.edu> if you have any questions.
+
 
 Acknowledgements
 ----------------
-The :code:`Simplicial-test` library is inspired and supported by the following great humans,
+The :code:`simplicial-test` library is inspired and supported by these great humans,
 `Josh Grochow`_, `Jean-Gabriel Young`_, and `Alice Patania`_.
 
 We want to thank

@@ -1,7 +1,7 @@
 :code:`cutoff` (to stop)
 ~~~~~~~~~~~~~~~~~~~~~~~~
 The algorithm will stop and conclude that the input sequence is not simplicial,
-if :math:`\tau_{\text{conv.}} \geq \text{cutoff}`. So this algorithm has false negatives,
+if :math:`\tau_{\text{c}} \geq \text{cutoff}`. So this algorithm has false negatives,
 i.e., concluding that some input is not simplicial when it's *actually* simplicial.
 
 By default, :math:`\text{cutoff} = 10^5`.

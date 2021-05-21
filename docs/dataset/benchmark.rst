@@ -1,18 +1,18 @@
 Benchmark
 =========
 We suggested in the paper that more than half of the (realizable) joint degree sequences
-falls in the "polynomial regime". How does this hold in real-world data? Well, the answer is likely affirmative.
+falls in the "polynomial regime". How does this hold in real-world data? The answer is likely affirmative.
 
 .. note::
-   We use :math:`\tau_{\text{conv}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
+   We use :math:`\tau_{\text{c}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
    is necessary to determine if the input integer sequences can be realized as a simplicial complex.
-   We deem a joint sequence polynomial if :math:`\tau_{\text{conv}} = 0`.
+   We deem a joint sequence polynomial if :math:`\tau_{\text{c}} = 0`.
 
    In that case, no backtracking (:math:`\tau_{\text{b}} = 0`) and
    no rejection  (:math:`\tau_{\text{r}} = 0`) is necessary,
    the algorithm either rejects simpliciality immediately or finds an instance in linear time.
 
-The results are measured with :code:`simplicial-test v1.0`,
+The results are measured with :code:`simplicial-test v1.2`,
 for a machine with `Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`_ (6 cores & 12 threads) and 64GB 2667MHz DDR4 memory.
 
 
@@ -20,7 +20,7 @@ for a machine with `Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`_ (6 cores & 12 thr
 
 
 **TABLE---Summary of the joint degree sequences derived from empirical datasets.**
-Shown are the convergence time :math:`\tau_\text{conv}`,
+Shown are the convergence time :math:`\tau_\text{c}`,
 wall time, number of edges :math:`E`, number of nodes (facets) :math:`n` (:math:`m`),
 maximal/minimal facet size, and maximal/minimal node degree.
 
@@ -30,7 +30,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
    :header-rows: 1
 
    * - Dataset
-     - :math:`\tau_\text{conv}`
+     - :math:`\tau_\text{c}`
      - Wall time
      - :math:`E`
      - :math:`m`
@@ -46,7 +46,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - 551
      - (25, 1)
      - (14, 1)
-     -
+     - [decker-louis-1991]_
    * - flower and pollinator
      - **0**
      - 295 ms
@@ -55,7 +55,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - 679
      - (189, 1)
      - (25, 1)
-     -
+     - [kato-insect-1990]_
    * - human diseasome
      - **0**
      - 2.1 s
@@ -64,7 +64,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - 1100
      - (10, 1)
      - (15, 1)
-     -
+     - [goh-human-2007]_
    * - senate committees
      - **0**
      - 1.57 s
@@ -85,7 +85,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [stewart-congressional-2017a]_
    * - contact high school
      - 3
-     - 1min 59s
+     - 1min 59s  [*]
      - 11770
      - 4862
      - 327
@@ -93,8 +93,8 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (90, 2)
      - [mastrandrea-contact-2015]_
    * - contact primary school
-     - 61465
-     - 7min 22s  [*]
+     - DNF
+     - N/A
      - 20615
      - 8010
      - 242
@@ -103,7 +103,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [stehlé-high-2011]_
    * - senate bills
      - DNF
-     - ??
+     - N/A
      - 92876
      - 3599
      - 294
@@ -112,7 +112,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [chodrow-hypergraph-2021]_
    * - mathoverflow answers
      - **0**
-     - 6h 13min  [*]
+     - 6h 15min  [*]
      - 131406
      - 5296
      - 73851
@@ -121,7 +121,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [veldt-minimizing-2020]_
    * - walmart trips
      - DNF
-     - ???
+     - N/A
      - 447347
      - 63687
      - 88860
@@ -130,7 +130,7 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - [amburg-clustering-2020]_
    * - house bills
      - 848
-     - 52h 57min
+     - 52h 40min
      - 927075
      - 23267
      - 1494
@@ -138,36 +138,51 @@ maximal/minimal facet size, and maximal/minimal node degree.
      - (3824, 1)
      - [chodrow-hypergraph-2021]_
 
-[*] We also run on a `Raspberry Pi 4 (8GB)`_ for the "contact primary school" dataset, the wall time is 34min 30s.
-However, for the "mathoverflow answers" dataset, MemoryError is raised (it has a memory use peak around 32GB).
+[*] We also run on a `Raspberry Pi 4 (8GB)`_ for the "contact high school" dataset, the wall time is 8min 36s.
+However, for the "mathoverflow answers" dataset, MemoryError is raised (it has a memory use peak at around 32GB).
 
-DNF: Did Not Finish under the default cutoff threshold.
+DNF: Did Not Finish with the default cutoff at :math:`\tau_\text{c} = 10^5`.
 
 .. _`Raspberry Pi 4 (8GB)`: https://www.raspberrypi.org/products/raspberry-pi-4-model-b/specifications/
 
 ----
 
-.. [chodrow-hypergraph-2021] Philip S. Chodrow, Nate Veldt, and Austin R. Benson,
-   "Hypergraph clustering: from blockmodels to modularity." 2021.
-   :arxiv:`2101.09611`.
-.. [stehlé-high-2011] Juliette Stehlé, Nicolas Voirin, Alain Barrat, Ciro Cattuto, Lorenzo Isella, Jean-François Pinton,
-   Marco Quaggiotto, Wouter Van den Broeck, Corinne Régis, Bruno Lina, and Philippe Vanhems,
-   "High-Resolution Measurements of Face-to-Face Contact Patterns in a Primary School." PLOS ONE, 2011.
-   :doi:`10.1371/journal.pone.0023176`, :arxiv:`1109.1015`.
+.. [decker-louis-1991] S. Decker, C. W. Kohfeld, R. Rosenfeld, and J. Sprague,
+   "St. Louis Homicide Project: Local Responses to a National Problem." University of Missouri, St. Louis, 1991
+
+.. [kato-insect-1990] Makoto Kato, Takehiko Kakutani, Tamiji Inoue, and Takao Itino,
+   "Insect-flower Relationship in the Primary Beech Forest of Ashu, Kyoto." Contr. Biol. Lab. Kyoto Univ., 1990.
+
+.. [goh-human-2007] Kwang-Il Goh, Michael E. Cusick, David Valle, Barton Childs, Marc Vidal, Albert-László Barabási,
+   "The human disease network." PNAS, 2007.
+   :doi:`10.1073/pnas.0701361104`
+
+.. [stewart-congressional-2017] Charles Stewart III and Jonathan Woon.
+   "Congressional Committee Assignments, 103rd to 114th Congresses, 1993--2017: Senate."
+
+.. [stewart-congressional-2017a] Charles Stewart III and Jonathan Woon.
+   "Congressional Committee Assignments, 103rd to 114th Congresses, 1993--2017: House."
+
 .. [mastrandrea-contact-2015] Rossana Mastrandrea, Julie Fournet, and Alain Barrat,
    "Contact Patterns in a High School: A Comparison between Data Collected Using Wearable Sensors,
    Contact Diaries and Friendship Surveys." PLOS ONE, 2015.
    :doi:`10.1371/journal.pone.0136497`, :arxiv:`1506.03645`.
-.. [stewart-congressional-2017] Charles Stewart III and Jonathan Woon.
-   "Congressional Committee Assignments, 103rd to 114th Congresses, 1993--2017: Senate."
-.. [stewart-congressional-2017a] Charles Stewart III and Jonathan Woon.
-   "Congressional Committee Assignments, 103rd to 114th Congresses, 1993--2017: House."
+
+.. [stehlé-high-2011] Juliette Stehlé, Nicolas Voirin, Alain Barrat, Ciro Cattuto, Lorenzo Isella, Jean-François Pinton,
+   Marco Quaggiotto, Wouter Van den Broeck, Corinne Régis, Bruno Lina, and Philippe Vanhems,
+   "High-Resolution Measurements of Face-to-Face Contact Patterns in a Primary School." PLOS ONE, 2011.
+   :doi:`10.1371/journal.pone.0023176`, :arxiv:`1109.1015`.
+
+.. [chodrow-hypergraph-2021] Philip S. Chodrow, Nate Veldt, and Austin R. Benson,
+   "Hypergraph clustering: from blockmodels to modularity." 2021.
+   :arxiv:`2101.09611`.
+
 .. [veldt-minimizing-2020] Nate Veldt, Austin R. Benson, and Jon Kleinberg.
    "Minimizing Localized Ratio Cut Objectives in Hypergraphs."
    Proceedings of the ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD), 2020.
    :doi:`10.1145/3394486.3403222`, :arxiv:`2002.09441`.
+
 .. [amburg-clustering-2020] Ilya Amburg, Nate Veldt, and Austin R. Benson.
    "Clustering in graphs and hypergraphs with categorical edge labels."
    Proceedings of the Web Conference (WWW), 2020.
    :doi:`10.1145/3366423.3380152`, :arxiv:`1910.09943`.
-

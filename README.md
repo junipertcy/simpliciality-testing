@@ -2,7 +2,7 @@
   <img src="https://github.com/junipertcy/simplicial-test/blob/main/docs/assets/simplicial-test-logo.png?raw=true" alt="logo" width=400>
 </div>
 
-[![python](https://img.shields.io/badge/pypi/pyversions/simplicial-test?style=flat)](https://test.pypi.org/project/simplicial-test/0.99.1/)
+[![python](https://img.shields.io/pypi/v/simplicial-test)](https://pypi.org/project/simplicial-test/)
 [![license](https://img.shields.io/badge/license-LGPL-green.svg?style=flat)](https://github.com/junipertcy/simplicial-test/blob/master/COPYING)
 
 
@@ -12,7 +12,7 @@ This is the software repository behind the paper:
 
 * *Construction of simplicial complexes with prescribed joint degree sequences*, [Tzu-Chi Yen](https://junipertcy.info/) (2021).
 
-Read it on: [arXiv]().
+Read it on: [arXiv](). (link will be updated later in May)
 
 * For full documentation, please visit [this site](https://docs.netscied.tw/simplicial-test/index.html).
 * For general Q&A, ideas, or other things, please visit [Discussions](https://github.com/junipertcy/simplicial-test/discussions).
@@ -33,20 +33,20 @@ and `s = (4, 3, 2, 2, 2, 1)` be the joint degree sequence of some simplicial com
 In your Python console, `simplicial-test` is invoked using:
 
 ```python
->> > from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
->> > degree_list = [3, 3, 2, 2, 1, 1, 1, 1]
->> > size_list = [4, 3, 2, 2, 2, 1]
->> > st = Test(degree_list, size_list)  # visit the docs for other options, like setting a cutoff to give up.
->> > is_simplicial, facets = st.is_simplicial()  # actual computation
->> > assert is_simplicial is True
->> > assert if_facets_simplicial(facets) is True
->> > assert compute_joint_seq(facets) == (sorted(degree_list, reverse=True), sorted(size_list, reverse=True))
->> > facets
+>>> from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
+>>> degree_list = [3, 3, 2, 2, 1, 1, 1, 1]
+>>> size_list = [4, 3, 2, 2, 2, 1]
+>>> st = Test(degree_list, size_list)  # visit the docs for other options, like setting a cutoff to give up.
+>>> is_simplicial, facets = st.is_simplicial()  # actual computation
+>>> assert is_simplicial is True
+>>> assert if_facets_simplicial(facets) is True
+>>> assert compute_joint_seq(facets) == (sorted(degree_list, reverse=True), sorted(size_list, reverse=True))
+>>> facets
 ((0, 1, 2, 4), (0, 1, 3), (0, 5), (1, 6), (2, 3), (7,))
 ```
 
-Command-line Utility, Scalability and Tests 
--------------------------------------------
+Command-line Utility and Unit Tests 
+-----------------------------------
 Alternatively, you may install `Simplicial-test` from the source:
 
 ```shell
@@ -121,7 +121,8 @@ Related links
 -------------
 * [The wonderful paper](https://doi.org/10.1103/PhysRevE.96.032312) on the Simplicial Configuration Model (SCM) and [its arXiv version](https://arxiv.org/abs/1705.10298).
 * The implementation of the [SCM sampler](https://github.com/jg-you/scm).
-* The graphical [Erdős–Gallai theorem](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem).
+* The [Erdős–Gallai theorem](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem) for graphical realization.
+* The [Havel–Hakimi algorithm](https://en.wikipedia.org/wiki/Havel%E2%80%93Hakimi_algorithm) for _constructive_ graphical realization.
 * The partition numbers: [A000041](https://oeis.org/A000041).
 * SageMath's [`random_element_uniform()`](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/partition.html#sage.combinat.partition.Partitions_n.random_element_uniform) that returns a random partition of n with uniform probability.
 * To see how `Simplicial-test` scales, check out [this benchmark](https://docs.netscied.tw/simplicial-test/dataset/benchmark.html).
@@ -129,8 +130,7 @@ Related links
 
 Acknowledgement
 ---------------
-The simplicial-test library is inspired and supported by the following great humans,
-Josh Grochow, Jean-Gabriel Young, and Alice Patania.
+The simplicial-test library is inspired and supported by Josh Grochow, Jean-Gabriel Young, and Alice Patania.
 
 We want to thank Stefanie Molin ([@stefmolin](https://github.com/stefmolin)) for their Custom-Colormaps,
 Iacopo Iacopini ([@iaciac](https://github.com/iaciac)) for their py-draw-simplicial-complex,

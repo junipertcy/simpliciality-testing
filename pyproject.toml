@@ -1,8 +1,7 @@
 [tool.poetry]
 name = "simplicial-test"
-version = "1.2.0"
-description = "Simplicial-test implements an algorithm that realizes a simplicial complex \\
-from a prescribed joint degree sequence (when feasible)."
+version = "1.2.1"
+description = "Simplicial-test implements an algorithm that realizes a simplicial complex from a prescribed joint degree sequence (if feasible)."
 authors = ["Tzu-Chi Yen <tzuchi.yen@colorado.edu>"]
 license = "LGPL-3.0-or-later"
 

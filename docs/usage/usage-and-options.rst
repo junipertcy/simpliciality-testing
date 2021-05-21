@@ -33,10 +33,10 @@ the computation, which makes it easy to carry around the "realized object".
 Here's a selection of other interesting attributes.
 
 - **conv_time**
-   In the paper, we use :math:`\tau_{\text{conv.}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
+   In the paper, we use :math:`\tau_{\text{c}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
    is necessary to determine if the input integer sequences can be realized as a simplicial complex.
    Every time when the proposed facet is rejected or when the searcher backtracks,
-   we increment by 1 the value of :math:`\tau_{\text{conv.}}`. So, at the end of computation,
+   we increment by 1 the value of :math:`\tau_{\text{c}}`. So, at the end of computation,
    this variable gives an sense of "how hard" the input instance is.
 
    ::
@@ -48,7 +48,7 @@ Here's a selection of other interesting attributes.
 
 
 - **levels_traj**
-   As you may notice, :math:`\tau_{\text{conv.}}` is a function of the branching stage :math:`i`,
+   As you may notice, :math:`\tau_{\text{c}}` is a function of the branching stage :math:`i`,
    meaning that the searcher may experience different amount of rejections at each stage.
    The :code:`levels_traj` records the number of rejections and backtracks at each iterative level.
    It gives you a chance to trace the "trajectory" of the searcher.

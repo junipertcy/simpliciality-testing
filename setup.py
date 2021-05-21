@@ -25,9 +25,11 @@ This is the software repository behind the paper:
 
 - Construction of simplicial complexes with prescribed joint degree sequences, Tzu-Chi Yen (2021).
 
-  Read it on arXiv: https://junipertcy.info/
+  Read it on arXiv: (link will be updated later in May)
 
-All Simplicial-test sdists and wheels distributed on PyPI are LGPLv3 licensed.
+👈 Please check the Project Links on the left for source code, documentation, discussion threads, etc.
+
+All simplicial-test sdists and wheels distributed on PyPI are licensed under LGPL-3.0-or-later.
 """
 
 from os.path import realpath, dirname, join
@@ -103,6 +105,7 @@ setup(
         'Bug Tracker': 'https://github.com/junipertcy/simplicial-test/issues',
         'Forum': 'https://github.com/junipertcy/simplicial-test/discussions',
         'Source Code': 'https://github.com/junipertcy/simplicial-test',
-        'Documentation': 'https://docs.netscied.tw/simplicial-test/index.html'
+        'Documentation': 'https://docs.netscied.tw/simplicial-test/index.html',
+        'Benchmark': 'https://docs.netscied.tw/simplicial-test/dataset/benchmark.html'
     },
 )
