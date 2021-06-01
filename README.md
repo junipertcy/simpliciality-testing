@@ -6,13 +6,13 @@
 [![license](https://img.shields.io/badge/license-LGPL-green.svg?style=flat)](https://github.com/junipertcy/simplicial-test/blob/master/COPYING)
 
 
-**Simplicial-test** implements a deterministic, backtracking-based algorithm to check whether a joint degree sequence is simplicial.
+**Simplicial-test** implements a deterministic, backtracking-based algorithm to check whether a degree-size sequence is simplicial.
 
 This is the software repository behind the paper:
 
-* *Construction of simplicial complexes with prescribed joint degree sequences*, [Tzu-Chi Yen](https://junipertcy.info/) (2021).
+* *Construction of Simplicial Complexes with Prescribed Degree-Size Sequences*, [Tzu-Chi Yen](https://junipertcy.info/) (2021).
 
-Read it on: [arXiv](). (link will be updated later in May)
+Read it on: [arXiv](). (link will be updated today)
 
 * For full documentation, please visit [this site](https://docs.netscied.tw/simplicial-test/index.html).
 * For general Q&A, ideas, or other things, please visit [Discussions](https://github.com/junipertcy/simplicial-test/discussions).
@@ -28,7 +28,7 @@ $ pip install simplicial-test
 ```
 
 Here's a typical *simplicial realization problem*: Can `d = (3, 3, 2, 2, 1, 1, 1, 1)`
-and `s = (4, 3, 2, 2, 2, 1)` be the joint degree sequence of some simplicial complex? 
+and `s = (4, 3, 2, 2, 2, 1)` be the degree-size sequence of some simplicial complex? 
 
 In your Python console, `simplicial-test` is invoked using:
 
@@ -81,7 +81,7 @@ To run the simplicial test on the command line:
 ```sh
 $ python utils/is_simplicial.py -k datasets/00_degs.txt -s datasets/00_sizes.txt
 
-Yes, the joint degree sequence is simplicial. 
+Yes, the degree-size sequence is simplicial. 
 The complex is: ((0, 1, 2, 3), (0, 1, 4), (0, 1, 5), (0, 2, 4), (3, 6), (7,))
 
 ```
@@ -89,25 +89,27 @@ The complex is: ((0, 1, 2, 3), (0, 1, 4), (0, 1, 5), (0, 2, 4), (3, 6), (7,))
 Look, the program gives an affirmative answer, with a realization in the standard output.
 
 `Simplicial-test` implements a search algorithm for solving
-the *simplicial realization problem*. If your input joint sequence is not realizable
+the *simplicial realization problem*. If your input degree-size sequence is not realizable
 (as a simplicial complex), we may need to traverse the entire search tree,
 which would take a huge amount of time!
 
-Happily, more than 90% of the input joint sequences lies in the *polynomial regime* (check out the paper),
-which means that they can be solved easily.
+Thru numerical experiments, 
+we find that the majority of the input degree-size sequences lies in the *polynomial regime*,
+which means that they can be solved rather easily.
 
-For example, you can assemble a simplicial complex from the joint sequence
+For example, you can assemble a simplicial complex from the degree-size sequence
 of the [crime network dataset](https://github.com/jg-you/scm/blob/master/datasets/crime_facet_list.txt),
-from this inspiring [Phys. Rev. E paper](https://doi.org/10.1103/PhysRevE.96.032312), 
-which has 551 nodes and 194 facets.
+from this [Phys. Rev. E paper](https://doi.org/10.1103/PhysRevE.96.032312), 
+which contains 551 nodes and 194 facets, via
 
 ```sh
 $ python utils/is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
 ```    
 
-Boom! It's rather fast, isn't it? 
+Boom! You'll see the realization in standard output. It's fast, isn't it? 
 
-Lastly, remember to check out [the docs](https://docs.netscied.tw/simplicial-test/index.html) for the full documentation!
+Lastly, 
+remember to check out [the docs](https://docs.netscied.tw/simplicial-test/index.html) for the full documentation!
 
 ### Development
 `Simplicial-test` uses [poetry](https://python-poetry.org/) for packaging 
@@ -119,20 +121,20 @@ You may also test with your local environment (for details, see [tests/](tests/)
 
 Related links
 -------------
-* [The wonderful paper](https://doi.org/10.1103/PhysRevE.96.032312) on the Simplicial Configuration Model (SCM) and [its arXiv version](https://arxiv.org/abs/1705.10298).
+* To see how `Simplicial-test` scales, check out [this benchmark](https://docs.netscied.tw/simplicial-test/dataset/benchmark.html).
+* The simplicial configuration model (SCM) - [the paper](https://doi.org/10.1103/PhysRevE.96.032312) ([arXiv](https://arxiv.org/abs/1705.10298)) that inspires this work.
 * The implementation of the [SCM sampler](https://github.com/jg-you/scm).
-* The [Erdős–Gallai theorem](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem) for graphical realization.
-* The [Havel–Hakimi algorithm](https://en.wikipedia.org/wiki/Havel%E2%80%93Hakimi_algorithm) for _constructive_ graphical realization.
 * The partition numbers: [A000041](https://oeis.org/A000041).
 * SageMath's [`random_element_uniform()`](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/partition.html#sage.combinat.partition.Partitions_n.random_element_uniform) that returns a random partition of n with uniform probability.
-* To see how `Simplicial-test` scales, check out [this benchmark](https://docs.netscied.tw/simplicial-test/dataset/benchmark.html).
-
+* The [Erdős–Gallai theorem](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem) for graphicality testing.
+* The [Gale–Ryser theorem](https://en.wikipedia.org/wiki/Gale%E2%80%93Ryser_theorem) for bigraphicality testing.
+* The [Havel–Hakimi algorithm](https://en.wikipedia.org/wiki/Havel%E2%80%93Hakimi_algorithm) for _constructive_ graphical realization.
 
 Acknowledgement
 ---------------
 The simplicial-test library is inspired and supported by Josh Grochow, Jean-Gabriel Young, and Alice Patania.
 
-We want to thank Stefanie Molin ([@stefmolin](https://github.com/stefmolin)) for their Custom-Colormaps,
-Iacopo Iacopini ([@iaciac](https://github.com/iaciac)) for their py-draw-simplicial-complex,
-whose libraries make pretty figures,
-and Austin Benson ([@arbenson](https://github.com/arbenson)) for their hypergraph datasets that helped identify bugs in larger systems.
+We want to thank Stefanie Molin ([@stefmolin](https://github.com/stefmolin)) for their `Custom-Colormaps`,
+Iacopo Iacopini ([@iaciac](https://github.com/iaciac)) for their `py-draw-simplicial-complex`,
+whose repositories make pretty figures,
+and Austin Benson ([@arbenson](https://github.com/arbenson)) for their hypergraph datasets that helped identify bugs of the algorithm in larger instance sizes.

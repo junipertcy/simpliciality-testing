@@ -58,12 +58,3 @@ Here's a selection of other interesting attributes.
    where each element contains a generator for candidate facet proposals at each level.
    It makes backtracking easier because, once we fail at a deeper level and are forced to backtrack,
    we can continue from some unexplored branch (i.e., the next item in the generator).
-
-
-
-
-
-% In general, we find that (1) degrees are fixed, the larger the avg sizes, the
-% slower the computation; (2) if sizes take Poisson, uniform degrees is slower;
-% (3) if degrees take Poisson, the larger the uniform s, the faster the
-% computation.

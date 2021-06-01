@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# simplicial-test -- a python module to realize simplicial joint sequences
+# simplicial_test -- a python module to realize simplicial degree-size sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -254,6 +254,7 @@ class Test(SimplexRegistrar):
         if sum(self.size_list) == 0:
             return True, self.__mark(True, self._assemble_simplicial_facets(self.fids2facets()))
         if not validators.preprocess(self.degree_list, self.size_list):
+            self.s_depot.add_to_time_counter(0)
             return False, self.__mark(False, tuple())
         while True:
             self._level += 1

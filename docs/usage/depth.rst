@@ -1,7 +1,8 @@
 :code:`depth` (to backtrack)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-By default, :math:`\text{depth} = \infty`, meaning that the algorithm only backtracks one level each time.
+By default, :math:`\text{depth} = \infty`, meaning that the algorithm only backtracks one branching stage each time.
+Otherwise, if at some stage we need to backtrack, the algorithm will "backjump" to the specified :math:`\text{depth}`.
 
 How to set :code:`depth`?
 --------------------------
@@ -39,20 +40,15 @@ Now let's set :code:`depth=2`,
 ::
 
     st = Test([17, 17, 16, 16, 16, 16, 16, 2, 1, 1, 1, 1], [3] * 40, verbose=False, depth=2)
-    is_simplicial, found_facets = st.is_simplicial()
+    is_simplicial, facets_found = st.is_simplicial()
 
-Voila! It takes no time.
+Voila! It takes little time.
 
 ::
 
-    print(found_facets)
+    print(facets_found)
     # Out[*]:
     # ((0, 1, 8), (0, 1, 9), (0, 3, 10), (0, 2, 3), (1, 2, 6), (0, 4, 5), (3, 5, 6), (0, 2, 5), (2, 5, 6), (2, 6, 7),
     # (0, 1, 4), (0, 1, 5), (2, 3, 6), (0, 3, 6), (1, 3, 6), (4, 5, 6), (2, 4, 6), (1, 4, 6), (1, 5, 6), (1, 4, 5),
     # (0, 4, 6), (1, 2, 4), (0, 1, 2), (1, 3, 5), (0, 3, 5), (3, 4, 5), (2, 3, 5), (1, 2, 5), (0, 2, 4), (2, 3, 4),
     # (1, 3, 4), (3, 6, 7), (0, 1, 3), (0, 1, 6), (0, 1, 7), (0, 2, 6), (0, 3, 4), (2, 4, 5), (2, 3, 11), (4, 5, 12))
-
-
-.. hint::
-   Another known instance which setting :code:`depth` to a lower value is helpful, is:
-

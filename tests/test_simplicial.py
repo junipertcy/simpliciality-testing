@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# simplicial-test -- a python module to realize simplicial joint sequences
+# simplicial_test -- a python module to realize simplicial degree-size sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #

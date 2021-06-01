@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# simplicial_test -- a python module to realize simplicial joint sequences
+# simplicial_test -- a python module to realize simplicial degree-size sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -47,9 +47,9 @@ def is_simplicial(degree_sequence, size_sequence, cutoff, width, depth, verbose)
         assert if_facets_simplicial(facets) is True
         assert joint_seqs[0] == sorted(degree_sequence, reverse=True)
         assert joint_seqs[1] == sorted(size_sequence, reverse=True)
-        print(f"Yes, the joint degree sequence is simplicial. \nThe complex is: {facets}")
+        print(f"Yes, the degree-size sequence is simplicial. \nThe complex is: {facets}")
     else:
-        print("No, the joint degree sequence cannot realize a simplicial complex.")
+        print("No, the degree-size sequence cannot realize a simplicial complex.")
 
 
 if __name__ == "__main__":

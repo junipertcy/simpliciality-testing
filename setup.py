@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# simplicial-test -- a python module to realize simplicial joint sequences
+# simplicial_test -- a python module to realize simplicial degree-size sequences
 #
 # Copyright (C) 2020-2021 Tzu-Chi Yen <tzuchi.yen@colorado.edu>
 #
@@ -17,15 +17,15 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-""" Simplicial-test realizes a simplicial complex from a prescribed joint degree sequence (when feasible).
+""" Simplicial-test realizes a simplicial complex from a prescribed degree-size sequence (when feasible).
 
 Simplicial-test provides a deterministic, backtracking-based search algorithm for the simplicial realization problem.
 
 This is the software repository behind the paper:
 
-- Construction of simplicial complexes with prescribed joint degree sequences, Tzu-Chi Yen (2021).
+- Construction of simplicial complexes with prescribed degree-size sequences, Tzu-Chi Yen (2021).
 
-  Read it on arXiv: (link will be updated later in May)
+  Read it on arXiv: (link will be updated today)
 
 👈 Please check the Project Links on the left for source code, documentation, discussion threads, etc.
 
@@ -93,7 +93,7 @@ setup(
     keywords=[
         'simplicial-test',
         'simplicial complex',
-        'degree sequence',
+        'degree-size sequence',
         'simplex',
         'topological data analysis',
         'topology',

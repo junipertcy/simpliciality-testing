@@ -1,18 +1,18 @@
 Benchmark
 =========
-We suggested in the paper that more than half of the (realizable) joint degree sequences
+We suggested in the paper that more than half of the (realizable) degree-size sequences
 falls in the "polynomial regime". How does this hold in real-world data? The answer is likely affirmative.
 
 .. note::
    We use :math:`\tau_{\text{c}} = \tau_{\text{r}} + \tau_{\text{b}}` to denote the time that
    is necessary to determine if the input integer sequences can be realized as a simplicial complex.
-   We deem a joint sequence polynomial if :math:`\tau_{\text{c}} = 0`.
+   We call a joint sequence polynomial if
+   :math:`\tau_{\text{c}} = 0` (if simplicial) or :math:`\tau_{\text{c}} = 1` (if not simplicial).
 
-   In that case, no backtracking (:math:`\tau_{\text{b}} = 0`) and
-   no rejection  (:math:`\tau_{\text{r}} = 0`) is necessary,
-   the algorithm either rejects simpliciality immediately or finds an instance in linear time.
+   In that case, no backtracking (:math:`\tau_{\text{b}} = 0`) is necessary,
+   the algorithm either finds an instance in linear time or rejects simpliciality immediately.
 
-The results are measured with :code:`simplicial-test v1.2`,
+The following results are measured with :code:`simplicial-test v1.2`, using 1 thread,
 for a machine with `Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`_ (6 cores & 12 threads) and 64GB 2667MHz DDR4 memory.
 
 
@@ -21,7 +21,7 @@ for a machine with `Intel(R) Core(TM) i7-8700B CPU @ 3.20GHz`_ (6 cores & 12 thr
 
 **TABLE---Summary of the joint degree sequences derived from empirical datasets.**
 Shown are the convergence time :math:`\tau_\text{c}`,
-wall time, number of edges :math:`E`, number of nodes (facets) :math:`n` (:math:`m`),
+wall time, instance size :math:`E`, number of nodes (resp. facets) :math:`n` (resp. :math:`m`),
 maximal/minimal facet size, and maximal/minimal node degree.
 
 .. list-table::
