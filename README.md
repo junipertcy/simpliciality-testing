@@ -12,7 +12,7 @@ This is the software repository behind the paper:
 
 * *Construction of Simplicial Complexes with Prescribed Degree-Size Sequences*, [Tzu-Chi Yen](https://junipertcy.info/) (2021).
 
-Read it on: [arXiv](). (link will be updated today)
+Read it on: [arXiv:2106.00185](https://arxiv.org/abs/2106.00185).
 
 * For full documentation, please visit [this site](https://docs.netscied.tw/simplicial-test/index.html).
 * For general Q&A, ideas, or other things, please visit [Discussions](https://github.com/junipertcy/simplicial-test/discussions).
@@ -94,7 +94,7 @@ the *simplicial realization problem*. If your input degree-size sequence is not 
 which would take a huge amount of time!
 
 Thru numerical experiments, 
-we find that the majority of the input degree-size sequences lies in the *polynomial regime*,
+we find that the majority of the input degree-size sequences lie in the *polynomial regime*,
 which means that they can be solved rather easily.
 
 For example, you can assemble a simplicial complex from the degree-size sequence
@@ -104,7 +104,7 @@ which contains 551 nodes and 194 facets, via
 
 ```sh
 $ python utils/is_simplicial.py -k datasets/crime_degs.txt -s datasets/crime_sizes.txt
-```    
+```
 
 Boom! You'll see the realization in standard output. It's fast, isn't it? 
 
@@ -125,7 +125,7 @@ Related links
 * The simplicial configuration model (SCM) - [the paper](https://doi.org/10.1103/PhysRevE.96.032312) ([arXiv](https://arxiv.org/abs/1705.10298)) that inspires this work.
 * The implementation of the [SCM sampler](https://github.com/jg-you/scm).
 * The partition numbers: [A000041](https://oeis.org/A000041).
-* SageMath's [`random_element_uniform()`](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/partition.html#sage.combinat.partition.Partitions_n.random_element_uniform) that returns a random partition of n with uniform probability.
+* SageMath's [`random_element_uniform()`](https://doc.sagemath.org/html/en/reference/combinat/sage/combinat/partition.html#sage.combinat.partition.Partitions_n.random_element_uniform) that returns a random partition of `n` with uniform probability.
 * The [Erdős–Gallai theorem](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93Gallai_theorem) for graphicality testing.
 * The [Gale–Ryser theorem](https://en.wikipedia.org/wiki/Gale%E2%80%93Ryser_theorem) for bigraphicality testing.
 * The [Havel–Hakimi algorithm](https://en.wikipedia.org/wiki/Havel%E2%80%93Hakimi_algorithm) for _constructive_ graphical realization.

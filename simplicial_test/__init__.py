@@ -35,8 +35,7 @@ from .sample import *
 from .draw import *
 
 __package__ = 'simplicial_test'
-__title__ = 'simplicial_test: a recursive, deterministic algorithm to check whether a joint sequence of ' \
-            'degree/size distributions is simplicial'
+__title__ = 'simplicial_test: a recursive, deterministic algorithm to check whether a given pair of integer sequences is simplicial.'
 __description__ = ''
 __copyright__ = 'Copyright (C) 2020-2021 Tzu-Chi Yen'
 __license__ = "LGPL version 3 or above"
@@ -44,7 +43,7 @@ __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 __release__ = '1.2'
 
 #  mark the class as not to be collected as pytest tests

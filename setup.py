@@ -19,13 +19,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 """ Simplicial-test realizes a simplicial complex from a prescribed degree-size sequence (when feasible).
 
-Simplicial-test provides a deterministic, backtracking-based search algorithm for the simplicial realization problem.
+Simplicial-test provides a deterministic, backtracking-based search algorithm for the simplicial complex realization problem.
 
 This is the software repository behind the paper:
 
-- Construction of simplicial complexes with prescribed degree-size sequences, Tzu-Chi Yen (2021).
+- Construction of Simplicial Complexes with Prescribed Degree-Size Sequences, Tzu-Chi Yen (2021).
 
-  Read it on arXiv: (link will be updated today)
+  Read it on arXiv: https://arxiv.org/abs/2106.00185
 
 👈 Please check the Project Links on the left for source code, documentation, discussion threads, etc.
 
