@@ -27,7 +27,7 @@ First steps
 $ pip install simplicial-test
 ```
 
-Here's a typical *simplicial realization problem*: Can `d = (3, 3, 2, 2, 1, 1, 1, 1)`
+Here's a typical *simplicial complex realization problem*: Can `d = (3, 3, 2, 2, 1, 1, 1, 1)`
 and `s = (4, 3, 2, 2, 2, 1)` be the degree-size sequence of some simplicial complex? 
 
 In your Python console, `simplicial-test` is invoked using:

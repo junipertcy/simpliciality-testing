@@ -22,33 +22,26 @@ from .utils import *
 
 
 def preprocess(sorted_d, sorted_s):
-    if np.max(sorted_d) > len(sorted_s):
+    counter_s = Counter(sorted_s)
+    counter_d = Counter(sorted_d)
+    if counter_s[1] > counter_d[1]:  # TODO: perhaps we could only enforce this at the very first level.
         return False
-    if len(sorted_s) > 1 and np.max(sorted_s) >= len(sorted_d):
+    cardinality_s = len(sorted_s)
+    cardinality_d = np.count_nonzero(sorted_d)
+    if np.max(sorted_d) > cardinality_s:
+        return False
+    if cardinality_d < np.max(sorted_s):
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False
-    if Counter(sorted_s)[1] > Counter(sorted_d)[1]:  # TODO: perhaps we could only enforce this at the very first level.
-        return False
-
-    _sorted_s = []
-    counter = 0
-    for _ in sorted_s:
-        if counter < max(sorted_d):
-            _sorted_s += [_ - 1]
-            counter += 1
-        else:
-            _sorted_s += [_]
-
-    if Counter(_sorted_s)[1] > len([_ for _ in sorted_d if _ > 0]) - 1:
+    if np.max(sorted_d) - (cardinality_s - counter_s[2]) > cardinality_d - 1:
         return False
 
     return True
 
 
-def get_wanting_slots(degs, facet):
-    """
-    Used in the greedy case only.
+def get_residual_data(degs, facet):
+    r"""Used in the greedy case only.
 
     Parameters
     ----------
@@ -60,169 +53,145 @@ def get_wanting_slots(degs, facet):
 
     """
     n = len(degs)
-    l_1 = [degs[_] - 1 if _ in set(facet) else degs[_] for _ in range(n)]
-    l_2 = [0 if _ in set(facet) else degs[_] for _ in range(n)]
-    return np.array(l_1, dtype=np.int_), np.array(l_2, dtype=np.int_)
+    residual_degs = [degs[_] - 1 if _ in set(facet) else degs[_] for _ in range(n)]
+    q = [0 if _ in set(facet) else degs[_] for _ in range(n)]
+    return np.array(residual_degs, dtype=np.int_), np.array(q, dtype=np.int_)
 
 
-def simple_validate(degs, sizes, facet):
-    wanting_degs, non_shielding = get_wanting_slots(degs, facet)  # wanting_degs (non_shielding & shielding)
-    if min(wanting_degs) < 0:
-        return False, "Rejected b/c added in min(wanting_degs) < 0"
-    elif len(sizes) == 1:
-        for _ in [facet]:
-            if set(np.nonzero(wanting_degs)[0]).issubset(set(_)):
-                return False, "Second last facet explored. " \
-                              "But the very last facet is doomed to fail the no-inclusion constraint."
-    if np.any(wanting_degs > len(sizes)):
-        return False, "Some degrees require more facets than the actual remaining number."
-    if np.count_nonzero(wanting_degs) < sizes[0]:
-        return False, "Rejected b/c np.count_nonzero(wanting_degs) < sizes[0]."
-    elif np.count_nonzero(wanting_degs) == sizes[0]:
-        if np.sum(wanting_degs) > np.count_nonzero(wanting_degs):
-            return False, "Rejected b/c np.sum(wanting_degs) > np.count_nonzero(wanting_degs)."
-    if np.min(non_shielding) >= 0:
-        if validate_nonshielding(sizes, wanting_degs, non_shielding):
-            return False, "Rejected while validating non_shielding vertices."
-    return True, wanting_degs
+def apply(degs, sizes, blocking_facets, facet):
+    residual_degs, non_shielding_q = get_residual_data(degs, facet)
+    if not rule_1(residual_degs, sizes):
+        return False, None, None
+    if not rule_2(residual_degs, sizes, non_shielding_q):
+        return False, None, None
+    blocked_sets = simplify_blocked_sets(blocking_facets)
+    if not rule_3(residual_degs, blocked_sets):
+        return False, None, None
+    return True, residual_degs, blocked_sets
 
 
-def validate_nonshielding(curent_sizes, wanting_degs, non_shielding):
-    r"""Verify that the sum of non-shielding slots not be less than the number of the remaining facets.
+def rule_1(residual_degs, residual_sizes):
+    """
 
     Parameters
     ----------
-    curent_sizes
-    wanting_degs
-    non_shielding
+    residual_degs
+    residual_sizes
 
     Returns
     -------
 
     """
-    shielding = wanting_degs - non_shielding  # only shielding
-    remaining = len(curent_sizes)
-    if np.sum(non_shielding) < remaining:
-        return True
-    elif np.sum(non_shielding) == remaining:
-        _ = [dummy - 1 for dummy in curent_sizes]
-        if len(_) - 1 <= 0:  # only the last to-be-chosen facet remains
+    cardinality_s = len(residual_sizes)
+    cardinality_d = np.count_nonzero(residual_degs)
+    # if min(residual_degs) < 0:
+    #     return False
+    if np.max(residual_degs) > cardinality_s:
+        return False
+    if cardinality_d < residual_sizes[0]:
+        return False
+    elif cardinality_d == residual_sizes[0]:
+        if cardinality_s != 1:
             return False
-        if _[0] > np.count_nonzero(shielding):
-            return True
-    return False  # safe!
 
-
-def basic_validations_degs_and_sizes(degs, sizes):
-    if Counter(degs)[len(sizes)] == np.min(sizes):
-        return False
-    if len(degs) == np.max(sizes):
-        return False
+    # counter_s = Counter(residual_sizes)
+    # counter_d = Counter(residual_degs)
+    # if counter_s[1] > counter_d[1]:  # TODO: perhaps we could only enforce this at the very first level.
+    #     return False
+    # if np.max(residual_degs) - (cardinality_s - counter_s[2]) > cardinality_d - 1:
+    #     return False
     return True
 
 
-def validate_reduced_seq(wanting_degs, sizes, current_facets, blocked_sets, verbose=False) -> (bool, tuple):
+def rule_2(residual_degs, residual_sizes, non_shielding_q):
+    r"""[Validate non-shielding nodes (i.e., Q)]
+    Verify that the sum of non-shielding degrees not be less than the number of the remaining facets.
+    If this function returns True, then we pass the validation rule. Otherwise, it returns false.
+
+    Parameters
+    ----------
+    residual_sizes
+    residual_degs
+    non_shielding_q
+
+    Returns
+    -------
+
+
+    """
+    shielding = residual_degs - non_shielding_q  # only shielding
+    cardinality_s = len(residual_sizes)
+    if cardinality_s > np.sum(non_shielding_q):
+        return False
+    elif cardinality_s == np.sum(non_shielding_q):
+        # if cardinality_s <= 1:  # only the last to-be-chosen facet remains
+        #     return True
+        if residual_sizes[0] - 1 > np.count_nonzero(shielding):
+            return False
+    return True
+
+
+def rule_3(residual_degs, blocked_sets):
+    for blocked_set in blocked_sets:
+        if set(np.nonzero(residual_degs)[0]).issubset(set(blocked_set)):
+            return False
+    return True
+
+
+def reduce(residual_degs, residual_sizes, blocked_sets, verbose=False) -> tuple:
     if verbose:
         print(f"----- (BEGIN: reducing seq) -----\n"
-              f"Wanting degrees: {[_ for _ in wanting_degs if _ > 0]}\n"
-              f"Size list: {sizes}\n"
-              f"Current facets: {current_facets}\n"
+              f"Wanting degrees: {residual_degs}\n"
+              f"Size list: {residual_sizes}\n"
               f"blocked_sets = {blocked_sets}"
               )
     collected_facets = []
     exempt_vids = []
-    while Counter(wanting_degs)[len(sizes)] != 0:
-        if len(sizes) > 1:
-            if not basic_validations_degs_and_sizes(degs=wanting_degs, sizes=sizes):
-                return False, tuple([None] * 4)
-        if Counter(sizes)[0] != len(sizes):
-            must_be_filled_vids = np.where(wanting_degs == len(sizes))[0].tolist()
-            exempt_vids += must_be_filled_vids
-        else:
-            break
-        sizes = [_ - Counter(wanting_degs)[len(sizes)] for _ in sizes]
-        wanting_degs[wanting_degs == len(sizes)] = 0
-        if min(sizes) < 0:
-            return False, tuple([None] * 4)
-        if Counter(sizes)[1] > 0:
-            if Counter(sizes)[1] > Counter(wanting_degs)[1]:
-                return False, tuple([None] * 4)
-            shielding_facets = get_shielding_facets_when_vids_filled(
-                current_facets, blocked_sets, must_be_filled_vids, exempt_vids=exempt_vids
-            )
-            shielding_facets = [set(_).difference(set(must_be_filled_vids)) for _ in shielding_facets]
-            if len(shielding_facets) == 0:  # You are free to do "remove_ones" (at a later stage, perhaps)
-                nonshielding_vids = set(np.nonzero(wanting_degs)[0])
-            else:
-                nonshielding_vids = get_nonshielding_vids(len(wanting_degs), shielding_facets)
-            all_one_sites = np.where(wanting_degs == 1)[0]
-            nonshielding_vids.intersection_update(set(all_one_sites))
-            if not nonshielding_vids:
-                return False, tuple([None] * 4)
-            wanting_degs, removed_sites = remove_ones(sizes, wanting_degs, choose_from=nonshielding_vids)
-            [sizes.remove(1) for _ in range(Counter(sizes)[1])]
+    forced_degs = Counter(residual_degs)
+    forced_sizes = Counter(residual_sizes)
+    while forced_degs[len(residual_sizes)] != 0 and np.sum(residual_sizes) != 0:
+        exempt_vids += np.where(residual_degs == len(residual_sizes))[0].tolist()  # forced vids
+
+        residual_sizes = [_ - forced_degs[len(residual_sizes)] for _ in residual_sizes]
+        residual_degs[residual_degs == len(residual_sizes)] = 0
+        for key in forced_sizes:
+            forced_sizes[key] -= forced_degs[len(residual_sizes)]
+        forced_degs[len(residual_sizes)] = 0
+
+        if forced_sizes[1] > 0:
+            cannot_choose = set()
+            for bset in blocked_sets:
+                if set(exempt_vids).issubset(bset):
+                    cannot_choose.union(set(bset).difference(exempt_vids))
+            sites_1s = set(np.where(residual_degs == 1)[0])
+            sites_1s.difference_update(cannot_choose)
+
+            residual_degs, removed_sites = remove_ones(residual_sizes, residual_degs, choose_from=sites_1s)
+            [residual_sizes.remove(1) for _ in range(len(removed_sites))]
+
+            forced_degs[1] -= len(removed_sites)
+            forced_sizes[1] -= len(removed_sites)
+
             collected_facets += [exempt_vids + [_] for _ in removed_sites]  # collected_facets immer from removed_sites
 
-    if np.sum(wanting_degs) == np.sum(sizes) == 0:
-        if validate_issubset_blocked_sets(exempt_vids, blocked_sets=blocked_sets):
-            return False, tuple([None] * 4)
+    # if np.sum(residual_degs) == np.sum(residual_sizes) == 0:
+    #     if a_issubset_any_b(exempt_vids, blocked_sets):
+    #         return False, tuple([None] * 4)
+
     if verbose:
         print(f"----- (↓ Returning these data ↓) -----\n"
-              f"Wanting degrees: {[_ for _ in wanting_degs if _ > 0]}\n"
-              f"Size list: {sizes}\n"
+              f"Wanting degrees: {residual_degs}\n"
+              f"Size list: {residual_sizes}\n"
               f"Collected facets: {collected_facets}\n"
               f"Exempt vertex ids: {exempt_vids}\n"
               f"----- (END: reducing seq) -----"
               )
-    return True, (wanting_degs, sizes, collected_facets, exempt_vids)
+    return residual_degs, residual_sizes, collected_facets, exempt_vids
 
 
-def validate_issubset_blocked_sets(candidate_facet, blocked_sets=None):
-    if blocked_sets is not None:
-        for facet in blocked_sets:
-            if set(candidate_facet).issubset(set(facet)):
+def a_issubset_any_b(a, b=None):
+    if b is not None:
+        for _b in b:
+            if set(a).issubset(set(_b)):
                 return True
     return False
-
-
-def get_shielding_facets_when_vids_filled(current_facets, blocked_sets, must_be_filled_vids, exempt_vids=None):
-    """
-    TODO: this function can be further simplified, along with the function::validate_reduced_seq
-    The function works when one have "must_be_filled_vids" -- it goes by searching already existing facets,
-    And find out the slots that must not be chosen in order to avoid clashes.
-
-    Parameters
-    ----------
-    current_facets
-    blocked_sets
-    must_be_filled_vids
-    exempt_vids
-
-
-    Returns
-    -------
-
-    """
-    if exempt_vids is None:
-        exempt_vids = []
-    shielding_facets = []
-    # if a facet contains these must_be_filled_vids (or 'mbfv')
-    mbfv = set(must_be_filled_vids).union(set(exempt_vids))
-    for facet in current_facets:  # for all existing facets
-        if mbfv.issubset(set(facet)):
-            shielding_facets += [facet]
-    for facet in blocked_sets:  # for all existing facets
-        if mbfv.issubset(set(facet)):
-            shielding_facets += [facet]
-    return shielding_facets  # then we must avoid the slots in these shielding_facets
-
-
-def get_nonshielding_vids(n, shielding_facets):
-    nonshielding_vids = set()
-    for facet in shielding_facets:
-        non_shielding_part = set(range(n)).difference(set(facet))  # non_shielding_part vertex_id's
-        if len(nonshielding_vids) == 0:
-            nonshielding_vids = non_shielding_part
-        else:
-            nonshielding_vids.intersection_update(non_shielding_part)
-    return nonshielding_vids

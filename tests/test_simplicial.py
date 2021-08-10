@@ -44,20 +44,9 @@ def test_all_ones_on_deg_seq():
     assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
-def test_trim_ones_first_true():
+def test_simplicial_0():
     size_list, degree_list = ([10, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    st = Test(degree_list, size_list, trim_ones_first=True)
-    is_simplicial, facets = st.is_simplicial()
-    assert is_simplicial is True
-    joint_seqs = compute_joint_seq(facets)
-    assert if_facets_simplicial(facets) is True
-    assert joint_seqs[0] == sorted(degree_list, reverse=True)
-    assert joint_seqs[1] == sorted(size_list, reverse=True)
-
-
-def test_trim_ones_first_false():
-    size_list, degree_list = ([10, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    st = Test(degree_list, size_list, trim_ones_first=False)
+    st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
     joint_seqs = compute_joint_seq(facets)
@@ -337,6 +326,17 @@ def test_simplicial_23_valid_trials():
 
 def test_simplicial_24_valid_trials():
     size_list, degree_list = ([3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], [8, 7, 6, 6, 6, 1, 1, 1])
+    st = Test(degree_list, size_list, verbose=0)
+    is_simplicial, facets = st.is_simplicial()
+    assert is_simplicial is True
+    joint_seqs = compute_joint_seq(facets)
+    assert if_facets_simplicial(facets) is True
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)
+
+
+def test_simplicial_25():
+    size_list, degree_list = ([3, 2, 2, 2, 2, 2], [5, 2, 2, 2, 1, 1])
     st = Test(degree_list, size_list, verbose=0)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True

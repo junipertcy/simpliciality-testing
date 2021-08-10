@@ -72,23 +72,6 @@ class SimplicialDepot:
             return False
 
 
-class SimplexRegistrar(object):
-    def __init__(self):
-        self.pointer = 0
-        self.name2id = dict()
-        self.id2name = dict()
-        self.facet_size_per_id = np.array([], dtype=np.int_)
-
-    def register(self, name) -> (tuple, int):
-        name = tuple(sorted(name, reverse=True))
-        if name not in self.name2id:
-            self.name2id[name] = self.pointer
-            self.id2name[self.pointer] = name
-            self.pointer += 1
-            self.facet_size_per_id = np.append(self.facet_size_per_id, [len(name)])
-        return name, self.name2id[name]
-
-
 def flatten(nested_list):
     f"""flattens out nested lists."""
     return [item for sublist in nested_list for item in sublist]
@@ -171,11 +154,12 @@ def transform_facets(facets, mapping, to="l+1") -> set:
         raise ValueError(f"data content to={to} not understood")
 
 
-def remove_ones(sizes, wanting_degs, choose_from=None):
+def remove_ones(sizes, residual_degs, choose_from=None):
     # todo, to figure out: you cannot do [-Counter(s)[1]:]
     removed_vtx_sites = np.array(list(choose_from), dtype=np.int_)[:Counter(sizes)[1]]
-    wanting_degs[removed_vtx_sites] = 0
-    return wanting_degs, removed_vtx_sites.tolist()
+    for site in removed_vtx_sites:
+        residual_degs[site] = 0
+    return residual_degs, removed_vtx_sites.tolist()
 
 
 def pair_one_by_one(size_list, degree_list) -> (list, list, int):
@@ -266,8 +250,12 @@ def get_seq2seq_mapping(degs):
 
 
 def filter_blocked_facets(blocked_facets, exempt_vids):
-    r"""Supposedly every existing facet will block potential facets in the next level; however, this only applies if
-    it contains `exempt_vids` because these vertices will be shared by next-level candidates.
+    r"""Find the effective subset of blocked_facets that affects future node selection at the presence of exempt_vids.
+
+    Note that not all blocked_facets (B) collected at a certain level will be carried over to the next level.
+    When we reduce the sequence and collect a number of exempt vids, these vids are shared among all remaining facets.
+    It is possible that any of the exempt vids does not intersect with all existing blocked_facets,
+    thus preventing the remaining facets to be a subset of the selected facets.
 
     Parameters
     ----------
@@ -276,6 +264,7 @@ def filter_blocked_facets(blocked_facets, exempt_vids):
 
     Returns
     -------
+    filtered
 
     """
     filtered = []

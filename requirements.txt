@@ -30,5 +30,6 @@ click>=7.1.2
 
 #### USED BY THE SAMPLE MODULE ####
 # hitting set solver
+# via `pip install python-sat` (See: https://pysathq.github.io/installation.html)
 # python-sat[pblib,aiger]
 

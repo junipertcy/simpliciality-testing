@@ -33,8 +33,8 @@ else:
     sys.setrecursionlimit(100000)
 
 
-class Test(SimplexRegistrar):
-    r"""Base class for SimplicialCheck.
+class Test:
+    r"""Base class for [Simpliciality]Test.
 
     Parameters
     ----------
@@ -90,16 +90,11 @@ class Test(SimplexRegistrar):
         if len(kwargs) > 0:
             raise ValueError(f"unrecognized keyword arguments: {str(list(kwargs.keys()))}")
 
-    def fids2facets(self):
-        r"""Translate current selected facet ids to facets."""
-        facets = []
-        for _id in self.current_fids:
-            facets += [self.id2name[_id]]
-        return facets
-
     @staticmethod
     def get_distinct_selection(size, degs, blocked_sets, level_map):
-        r"""Select a candidate facet (of size ``size``).
+        r"""Compute the generator for candidate facets (each of size ``size``) from a set of nodes.
+        These facets are ordered according to the branching heuristic as explained in the paper,
+        see https://arxiv.org/abs/2106.00185.
 
         Parameters
         ----------
@@ -107,7 +102,7 @@ class Test(SimplexRegistrar):
             Number of vertices to make the facet.
 
         degs : ``list`` of ``int``
-            Sequence of wanting/residual vertex degree distribution.
+            Sequence of wanting (or residual) vertex degree sequence.
 
         blocked_sets : ``list`` of integer-valued ``tuple`` objects (optional, default ``None``)
             Facets that must be respected for non-inclusion.
@@ -143,7 +138,7 @@ class Test(SimplexRegistrar):
             yield tuple(facet)
 
     def sample_candidate_facet(self, size, valid_trials=None):
-        """
+        r"""
 
         Parameters
         ----------
@@ -167,15 +162,10 @@ class Test(SimplexRegistrar):
                 facet = next(self.s_depot.valid_trials[self._level - 1])  # candidate_facet
             except RuntimeError:
                 raise NoMoreBalls
-            if validators.validate_issubset_blocked_sets(facet, self.blocked_sets):
+            if validators.a_issubset_any_b(facet, self.blocked_sets):
                 continue
             counter += 1
-            ind, reason = self.validate(facet)
-            if ind:
-                picked_facet, picked_facet_id = self.register(facet)
-                self.current_fids += [picked_facet_id]
-                return picked_facet
-            else:
+            if not self.validate(facet):
                 self.non_simplicial_signal = self.s_depot.add_to_time_counter(self._level - 1)
 
     def validate(self, facet) -> (bool, str):
@@ -188,7 +178,7 @@ class Test(SimplexRegistrar):
 
         Returns
         -------
-        token : ``(bool, str)``
+        token : ``bool``
             A tuple of the form ``(ind, reason)``, where ``ind`` is the indicator for whether
             the candidate facet passes the validations and ``reason`` explains why they fail.
 
@@ -204,55 +194,41 @@ class Test(SimplexRegistrar):
         -----
 
         """
-        sizes = self.size_list
-        if len(sizes) == 0:
-            return True, "Last facet explored."
+        residual_sizes = self.size_list
+        if np.sum(residual_sizes) == 0:
+            raise SimplicialSignal([facet])  # Last facet explored.
 
-        passed, wanting_degs = validators.simple_validate(self.degree_list, sizes, facet)
-        if not passed:
-            return passed, wanting_degs  # wanting_degs: Str = "short explanation of why the candidate facet fails."
+        safe, residual_degs, blocked_sets = validators.apply(self.degree_list, residual_sizes, self.blocked_sets, facet)
+        if not safe:
+            return False
 
-        blocked_sets = simplify_blocked_sets(self.blocked_sets)
-        for blocked_set in blocked_sets:
-            if set(np.nonzero(wanting_degs)[0]).issubset(set(blocked_set)):
-                return False, "Rejected b/c the remaining facets are doomed to fail the no-inclusion constraint."
-
-        if Counter(wanting_degs)[len(sizes)] != 0:
-            passed, (wanting_degs, sizes, collected_facets, exempt_vids) = validators.validate_reduced_seq(
-                wanting_degs, sizes, [facet], blocked_sets, verbose=self.verbose
-            )
-            if not passed:
-                return False, "Rejected while reducing the sequences"
-            if np.sum(wanting_degs) == np.sum(sizes) == 0:
-                for collected_facet in collected_facets:
-                    if set(exempt_vids).issubset(collected_facet):
-                        raise SimplicialSignal([facet] + collected_facets)
-                raise SimplicialSignal([facet] + [exempt_vids] + collected_facets)
-        else:
-            exempt_vids = []
-            collected_facets = []
+        residual_degs, residual_sizes, collected_facets, exempt_vids = validators.reduce(
+            residual_degs, residual_sizes, [facet] + blocked_sets, verbose=self.verbose
+        )
+        if np.sum(residual_sizes) == 0:
+            raise SimplicialSignal([facet] + [exempt_vids] + collected_facets)
 
         filtered = filter_blocked_facets([facet] + blocked_sets, exempt_vids)
         blocked_sets = sort_facets(self.blocked_sets)
 
-        sorted_wanting_degs = sorted(wanting_degs, reverse=True)
+        sorted_wanting_degs = sorted(residual_degs, reverse=True)
         _ = (tuple(sorted_wanting_degs), tuple(blocked_sets))
         if _[1] in self.s_depot.explored[_[0]]:
             raise NoMoreBalls
         self.s_depot.explored[_[0]].add(_[1])
 
-        self.s_depot.mappers[self._level] = get_seq2seq_mapping(wanting_degs)  # (mapping2shrinked, mapping2enlarged)
+        self.s_depot.mappers[self._level] = get_seq2seq_mapping(residual_degs)  # (mapping2shrinked, mapping2enlarged)
         self.s_depot.compute_level_map(self._level, self.s_depot.mappers[self._level][0])
         self.s_depot.collects[self._level] = collected_facets
         self.s_depot.exempts[self._level] = exempt_vids
         self.s_depot.candidates[self._level] = [facet]
 
         blocked_sets = transform_facets(filtered, self.s_depot.mappers[self._level][0], to="l+1")
-        raise GoToNextLevel(sorted_wanting_degs, sizes, blocked_sets)
+        raise GoToNextLevel(sorted_wanting_degs, residual_sizes, sort_facets(blocked_sets))
 
     def is_simplicial(self):
-        if sum(self.size_list) == 0:
-            return True, self.__mark(True, self._assemble_simplicial_facets(self.fids2facets()))
+        if np.sum(self.size_list) == 0:
+            return True, self.__mark(True, self._assemble_simplicial_facets([]))
         if not validators.preprocess(self.degree_list, self.size_list):
             self.s_depot.add_to_time_counter(0)
             return False, self.__mark(False, tuple())
@@ -268,12 +244,13 @@ class Test(SimplexRegistrar):
             except SimplicialSignal as e:
                 return True, self.__mark(True, self._assemble_simplicial_facets(e.message))
             except GoToNextLevel as e:
-                degree_list, size_list, blocked_sets = e.message
-                if not validators.preprocess(degree_list, size_list):
-                    self._rollback(self._level - 1)
-                else:
-                    self.degree_list, self.size_list = degree_list, size_list
-                    self.blocked_sets = sort_facets(blocked_sets)
+                self.degree_list, self.size_list, self.blocked_sets = e.message
+                # degree_list, size_list, blocked_sets = e.message
+                # if not validators.preprocess(degree_list, size_list):
+                #     self._rollback(self._level - 1)
+                # else:
+                #     self.degree_list, self.size_list = degree_list, size_list
+                #     self.blocked_sets = sort_facets(blocked_sets)
             except NoMoreBalls:
                 if self._level == 1:
                     return False, self.__mark(False, tuple())
@@ -281,9 +258,6 @@ class Test(SimplexRegistrar):
                     self._rollback(self.depth)
                 else:
                     self._rollback(self._level - 1)
-            else:
-                if sum(self.size_list) == 0:
-                    return True, self.__mark(True, self._assemble_simplicial_facets(self.fids2facets()))
 
     def _clean_valid_trials(self):
         for ind, _ in enumerate(self.s_depot.size_list):
