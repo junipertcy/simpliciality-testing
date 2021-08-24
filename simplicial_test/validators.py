@@ -21,11 +21,7 @@
 from .utils import *
 
 
-def preprocess(sorted_d, sorted_s):
-    counter_s = Counter(sorted_s)
-    counter_d = Counter(sorted_d)
-    if counter_s[1] > counter_d[1]:  # TODO: perhaps we could only enforce this at the very first level.
-        return False
+def check_preconditions(sorted_d, sorted_s):
     cardinality_s = len(sorted_s)
     cardinality_d = np.count_nonzero(sorted_d)
     if np.max(sorted_d) > cardinality_s:
@@ -34,8 +30,14 @@ def preprocess(sorted_d, sorted_s):
         return False
     if np.sum(sorted_d) != np.sum(sorted_s):
         return False
-    if np.max(sorted_d) - (cardinality_s - counter_s[2]) > cardinality_d - 1:
+
+    counter_s = Counter(sorted_s)
+    counter_d = Counter(sorted_d)
+    if counter_s[1] > counter_d[1]:
         return False
+
+    # if np.max(sorted_d) - (cardinality_s - counter_s[2]) > cardinality_d - 1:
+    #     return False
 
     return True
 
@@ -58,16 +60,14 @@ def get_residual_data(degs, facet):
     return np.array(residual_degs, dtype=np.int_), np.array(q, dtype=np.int_)
 
 
-def apply(degs, sizes, blocking_facets, facet):
-    residual_degs, non_shielding_q = get_residual_data(degs, facet)
-    if not rule_1(residual_degs, sizes):
-        return False, None, None
-    if not rule_2(residual_degs, sizes, non_shielding_q):
-        return False, None, None
-    blocked_sets = simplify_blocked_sets(blocking_facets)
+def apply(residual_degs, residual_sizes, blocked_sets, non_shielding_q):
+    if not rule_1(residual_degs, residual_sizes):
+        return False
+    if not rule_2(residual_degs, residual_sizes, non_shielding_q):
+        return False
     if not rule_3(residual_degs, blocked_sets):
-        return False, None, None
-    return True, residual_degs, blocked_sets
+        return False
+    return True
 
 
 def rule_1(residual_degs, residual_sizes):
@@ -84,8 +84,6 @@ def rule_1(residual_degs, residual_sizes):
     """
     cardinality_s = len(residual_sizes)
     cardinality_d = np.count_nonzero(residual_degs)
-    # if min(residual_degs) < 0:
-    #     return False
     if np.max(residual_degs) > cardinality_s:
         return False
     if cardinality_d < residual_sizes[0]:
@@ -94,10 +92,11 @@ def rule_1(residual_degs, residual_sizes):
         if cardinality_s != 1:
             return False
 
+    # With memory of the previous stage, the following rule can throw NoMoreBalls,
+    # if we believe that no more alternation of proposal facet would pass the validation rule.
+    # We did not apply the rule in the paper.
+    #
     # counter_s = Counter(residual_sizes)
-    # counter_d = Counter(residual_degs)
-    # if counter_s[1] > counter_d[1]:  # TODO: perhaps we could only enforce this at the very first level.
-    #     return False
     # if np.max(residual_degs) - (cardinality_s - counter_s[2]) > cardinality_d - 1:
     #     return False
     return True
@@ -138,7 +137,26 @@ def rule_3(residual_degs, blocked_sets):
     return True
 
 
+def basic_check(degs, sizes):
+    if Counter(degs)[len(sizes)] == np.min(sizes):
+        return False
+    return True
+
+
 def reduce(residual_degs, residual_sizes, blocked_sets, verbose=False) -> tuple:
+    r"""
+
+    Parameters
+    ----------
+    residual_degs
+    residual_sizes
+    blocked_sets
+    verbose
+
+    Returns
+    -------
+
+    """
     if verbose:
         print(f"----- (BEGIN: reducing seq) -----\n"
               f"Wanting degrees: {residual_degs}\n"
@@ -148,24 +166,33 @@ def reduce(residual_degs, residual_sizes, blocked_sets, verbose=False) -> tuple:
     collected_facets = []
     exempt_vids = []
     forced_degs = Counter(residual_degs)
-    forced_sizes = Counter(residual_sizes)
-    while forced_degs[len(residual_sizes)] != 0 and np.sum(residual_sizes) != 0:
+    flag = False
+    while forced_degs[len(residual_sizes)] > 0 and np.sum(residual_sizes) != 0:
+        flag = False
+        if len(residual_sizes) > 1 and not basic_check(degs=residual_degs, sizes=residual_sizes):
+            return False, None
+
         exempt_vids += np.where(residual_degs == len(residual_sizes))[0].tolist()  # forced vids
 
         residual_sizes = [_ - forced_degs[len(residual_sizes)] for _ in residual_sizes]
         residual_degs[residual_degs == len(residual_sizes)] = 0
-        for key in forced_sizes:
-            forced_sizes[key] -= forced_degs[len(residual_sizes)]
+
+        forced_sizes = Counter(residual_sizes)
         forced_degs[len(residual_sizes)] = 0
 
         if forced_sizes[1] > 0:
+            if forced_sizes[1] > forced_degs[1]:
+                return False, None
+
             cannot_choose = set()
             for bset in blocked_sets:
                 if set(exempt_vids).issubset(bset):
-                    cannot_choose.union(set(bset).difference(exempt_vids))
+                    cannot_choose = cannot_choose.union(set(bset).difference(exempt_vids))
             sites_1s = set(np.where(residual_degs == 1)[0])
             sites_1s.difference_update(cannot_choose)
 
+            if len(sites_1s) < forced_sizes[1]:  # latest edit: this rule should be stronger
+                return False, None
             residual_degs, removed_sites = remove_ones(residual_sizes, residual_degs, choose_from=sites_1s)
             [residual_sizes.remove(1) for _ in range(len(removed_sites))]
 
@@ -173,11 +200,7 @@ def reduce(residual_degs, residual_sizes, blocked_sets, verbose=False) -> tuple:
             forced_sizes[1] -= len(removed_sites)
 
             collected_facets += [exempt_vids + [_] for _ in removed_sites]  # collected_facets immer from removed_sites
-
-    # if np.sum(residual_degs) == np.sum(residual_sizes) == 0:
-    #     if a_issubset_any_b(exempt_vids, blocked_sets):
-    #         return False, tuple([None] * 4)
-
+            flag = True
     if verbose:
         print(f"----- (↓ Returning these data ↓) -----\n"
               f"Wanting degrees: {residual_degs}\n"
@@ -186,7 +209,11 @@ def reduce(residual_degs, residual_sizes, blocked_sets, verbose=False) -> tuple:
               f"Exempt vertex ids: {exempt_vids}\n"
               f"----- (END: reducing seq) -----"
               )
-    return residual_degs, residual_sizes, collected_facets, exempt_vids
+    if np.sum(residual_sizes) == 0 and not flag:
+        if a_issubset_any_b(exempt_vids, blocked_sets):
+            return False, None
+    residual_blocked_sets = filter_blocked_facets(blocked_sets, exempt_vids)
+    return True, (residual_degs, residual_sizes, residual_blocked_sets, collected_facets, exempt_vids, flag)
 
 
 def a_issubset_any_b(a, b=None):

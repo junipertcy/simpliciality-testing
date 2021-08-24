@@ -23,7 +23,7 @@ from simplicial_test import Test, compute_joint_seq, if_facets_simplicial
 
 
 def test_all_ones():
-    size_list, degree_list = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    degree_list, size_list = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -34,7 +34,7 @@ def test_all_ones():
 
 
 def test_all_ones_on_deg_seq():
-    size_list, degree_list = ([10], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    degree_list, size_list = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [10])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -45,7 +45,7 @@ def test_all_ones_on_deg_seq():
 
 
 def test_simplicial_0():
-    size_list, degree_list = ([10, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    degree_list, size_list = ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [10, 1, 1, 1, 1, 1, 1])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -56,7 +56,7 @@ def test_simplicial_0():
 
 
 def test_simplicial_1():
-    size_list, degree_list = ([6, 6, 3, 3, 2], [3, 2, 2, 2, 3, 3, 2, 3])
+    degree_list, size_list = ([3, 2, 2, 2, 3, 3, 2, 3], [6, 6, 3, 3, 2])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -67,7 +67,7 @@ def test_simplicial_1():
 
 
 def test_simplicial_2():
-    size_list, degree_list = ([5, 4, 3, 3, 2], [4, 3, 3, 2, 2, 1, 1, 1])
+    degree_list, size_list = ([4, 3, 3, 2, 2, 1, 1, 1], [5, 4, 3, 3, 2])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -78,7 +78,7 @@ def test_simplicial_2():
 
 
 def test_simplicial_3():
-    size_list, degree_list = ([6, 4, 4], [3, 2, 3, 1, 1, 2, 2])
+    degree_list, size_list = ([3, 2, 3, 1, 1, 2, 2], [6, 4, 4])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -122,7 +122,7 @@ def test_simplicial_6():
 
 
 def test_simplicial_7():
-    size_list, degree_list = ([8, 6, 6, 5, 4], [4, 4, 4, 3, 3, 3, 3, 2, 2, 1])
+    degree_list, size_list = ([4, 4, 4, 3, 3, 3, 3, 2, 2, 1], [8, 6, 6, 5, 4])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -314,7 +314,7 @@ def test_simplicial_22():
 
 
 def test_simplicial_23_valid_trials():
-    size_list, degree_list = ([8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2], [9, 8, 8, 7, 5, 5, 5, 4, 4, 4, 1])
+    degree_list, size_list = ([9, 8, 8, 7, 5, 5, 5, 4, 4, 4, 1], [8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2])
     st = Test(degree_list, size_list, verbose=0)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -325,7 +325,7 @@ def test_simplicial_23_valid_trials():
 
 
 def test_simplicial_24_valid_trials():
-    size_list, degree_list = ([3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], [8, 7, 6, 6, 6, 1, 1, 1])
+    degree_list, size_list = ([8, 7, 6, 6, 6, 1, 1, 1], [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3])
     st = Test(degree_list, size_list, verbose=0)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -336,7 +336,7 @@ def test_simplicial_24_valid_trials():
 
 
 def test_simplicial_25():
-    size_list, degree_list = ([3, 2, 2, 2, 2, 2], [5, 2, 2, 2, 1, 1])
+    degree_list, size_list = ([5, 2, 2, 2, 1, 1], [3, 2, 2, 2, 2, 2])
     st = Test(degree_list, size_list, verbose=0)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True
@@ -368,7 +368,7 @@ def test_time_consuming_case():
     This instance has st.s_depot.conv_time at roughly 123943 (~ 200 sec to compute).... recursive code
 
     """
-    size_list, degree_list = ([7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2], [11, 7, 7, 6, 6, 6, 6, 5, 3, 1, 1, 1])
+    degree_list, size_list = ([11, 7, 7, 6, 6, 6, 6, 5, 3, 1, 1, 1], [7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2])
     st = Test(degree_list, size_list)
     is_simplicial, facets = st.is_simplicial()
     assert is_simplicial is True

@@ -200,10 +200,8 @@ class EnumRegistrar(object):
             if len(facets) > 0 and max(flatten(facets)) >= len(self.deg_seq):
                 return
             self.size_seq = np.array(self.size_seq, dtype=np.int_)
-            token = validators.apply(
-                self.deg_seq, self.size_seq[len(facets):], None, facet,
-            )
-            if token[0] is False:
+            residual_degs, non_shielding_q = validators.get_residual_data(self.deg_seq, facet)
+            if not validators.apply(residual_degs, self.size_seq[len(facets):], None, non_shielding_q):
                 return
 
         if len(facets) == 0:

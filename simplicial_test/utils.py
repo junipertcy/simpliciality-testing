@@ -24,6 +24,7 @@ from collections import defaultdict, Counter
 from functools import partial
 from typing import List
 from copy import deepcopy
+from .custom_exceptions import NonSimplicialSignal, NoMoreBalls
 
 
 @dataclass(frozen=False)
@@ -54,22 +55,26 @@ class SimplicialDepot:
             self.valid_trials[ind] = None
         self.level_map[1].fill(-1)
 
-    def compute_level_map(self, level, mapping2shrinked):
+    def compute_level_map(self, level, mapping_forward):
         for _ in range(len(self.degree_list)):
             vtx_current_view = self.level_map[level - 1][_]
-            if vtx_current_view == -1 or vtx_current_view not in mapping2shrinked:
+            if vtx_current_view == -1 or vtx_current_view not in mapping_forward:
                 self.level_map[level][_] = -1
             else:
-                self.level_map[level][_] = mapping2shrinked[vtx_current_view]
+                self.level_map[level][_] = mapping_forward[vtx_current_view]
 
-    def add_to_time_counter(self, level):
+    def add_to_time_counter(self, level, reason="reject"):
         self.time[int(level - 1)] += 1
         self.conv_time += 1
         self.levels_traj += [level - 1]
         if self.conv_time >= self.cutoff:
-            return True
-        else:
-            return False
+            raise NonSimplicialSignal
+        if reason == "reject":
+            pass
+        elif reason == "backtrack":
+            if level == 0:
+                raise NonSimplicialSignal
+            raise NoMoreBalls
 
 
 def flatten(nested_list):
@@ -136,9 +141,9 @@ def get_indices_of_k_in_blocked_sets(blocked_sets, k):
 
 
 def transform_facets(facets, mapping, to="l+1") -> set:
-    if to == "l-1":
+    if to == "l-1":  # mapping_backward
         return set(map(lambda x: tuple(map(lambda y: mapping[y], x)), facets))
-    elif to == "l+1":
+    elif to == "l+1":  # mapping_forward
         _facets = set()
         for facet in facets:
             transformed_facet = []
@@ -162,27 +167,27 @@ def remove_ones(sizes, residual_degs, choose_from=None):
     return residual_degs, removed_vtx_sites.tolist()
 
 
-def pair_one_by_one(size_list, degree_list) -> (list, list, int):
+def pair_one_by_one(degree_list, size_list) -> (list, list, int):
     """
     This function is used to pair up the ones in size/deg lists, since this is the only plausible situation.
     Note that it is only applied when level=0.
 
     Parameters
     ----------
-    size_list
     degree_list
+    size_list
 
     Returns
     -------
 
     """
-    size_list = sorted(size_list, reverse=True)
     degree_list = sorted(degree_list, reverse=True)
-    _ = min(Counter(size_list)[1], Counter(degree_list)[1])
+    size_list = sorted(size_list, reverse=True)
+    _ = min(Counter(degree_list)[1], Counter(size_list)[1])
     for __ in range(_):
-        size_list.remove(1)
         degree_list.remove(1)
-    return size_list, degree_list, _
+        size_list.remove(1)
+    return degree_list, size_list, _
 
 
 def sort_helper(st) -> list:
@@ -215,13 +220,13 @@ def sort_callback(facets):
 
 
 # def get_seq2seq_mapping(degs):
-#     mapping2enlarged = dict()
+#     mapping_backward = dict()
 #     nonzero_degs = np.count_nonzero(degs)
 #     argsort = np.argsort(degs)[::-1]
 #     for idx in np.arange(0, nonzero_degs, 1):
-#         mapping2enlarged[idx] = argsort[idx]
-#     mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
-#     return mapping2shrinked, mapping2enlarged
+#         mapping_backward[idx] = argsort[idx]
+#     mapping_forward = {v: k for k, v in mapping_backward.items()}
+#     return mapping_forward, mapping_backward
 
 def get_seq2seq_mapping(degs):
     old2new = dict()
@@ -240,13 +245,13 @@ def get_seq2seq_mapping(degs):
             inv_old2new[key][idx] = _idx
             _idx += 1
 
-    mapping2enlarged = dict()
+    mapping_backward = dict()
     for key in inv_old2new.keys():
         for idx, new_key in enumerate(inv_old2new[key]):
-            mapping2enlarged[new_key] = _inv_old2new[key][idx]
+            mapping_backward[new_key] = _inv_old2new[key][idx]
 
-    mapping2shrinked = {v: k for k, v in mapping2enlarged.items()}
-    return mapping2shrinked, mapping2enlarged
+    mapping_forward = {v: k for k, v in mapping_backward.items()}
+    return mapping_forward, mapping_backward
 
 
 def filter_blocked_facets(blocked_facets, exempt_vids):
