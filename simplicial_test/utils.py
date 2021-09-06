@@ -36,7 +36,7 @@ class SimplicialDepot:
     prev_d: dict = field(repr=False, default_factory=dict)
     prev_s: dict = field(repr=False, default_factory=dict)
     prev_b: dict = field(repr=False, default_factory=dict)
-    mappers: dict = field(repr=False, default_factory=dict)
+    maps: dict = field(repr=False, default_factory=dict)
     exempts: dict = field(repr=False, default_factory=dict)
     collects: dict = field(repr=False, default_factory=dict)
     candidates: dict = field(repr=False, default_factory=dict)
@@ -55,8 +55,8 @@ class SimplicialDepot:
             self.valid_trials[ind] = None
         self.level_map[1].fill(-1)
 
-    def compute_level_map(self, level, mapping_forward):
-        for _ in range(len(self.degree_list)):
+    def compute_lmap(self, level, degree_list, mapping_forward):
+        for _ in range(len(degree_list)):
             vtx_current_view = self.level_map[level - 1][_]
             if vtx_current_view == -1 or vtx_current_view not in mapping_forward:
                 self.level_map[level][_] = -1
@@ -272,6 +272,8 @@ def filter_blocked_facets(blocked_facets, exempt_vids):
     filtered
 
     """
+    if len(exempt_vids) == 0:  # only to make the function faster without sweeping through blocked_facets
+        return blocked_facets
     filtered = []
     for facet in blocked_facets:
         if set(exempt_vids).issubset(facet):
