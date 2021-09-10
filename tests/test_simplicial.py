@@ -346,33 +346,33 @@ def test_simplicial_25():
     assert joint_seqs[1] == sorted(size_list, reverse=True)
 
 
-# def test_time_consuming_case():
-#     r"""Plausible instance:
-#         [[0, 1, 2, 3, 4, 5, 6],
-#          [7, 8, 9, 10, 5, 3, 0],
-#          [7, 6, 0, 5, 4, 3],
-#          [7, 1, 0, 3, 5, 6],
-#          [7, 1, 4, 2, 5],
-#          [7, 1, 4, 3, 5],
-#          [7, 1, 4, 6],
-#          [7, 1, 4, 0],
-#          [7, 2, 3],
-#          [7, 2, 0],
-#          [7, 2, 6],
-#          [11, 2, 7],
-#          [8, 2],
-#          [8, 1]]
-#
-#     Notes
-#     -----
-#     This instance has st.s_depot.conv_time at roughly 123943 (~ 200 sec to compute).... recursive code
-#
-#     """
-#     degree_list, size_list = ([11, 7, 7, 6, 6, 6, 6, 5, 3, 1, 1, 1], [7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2])
-#     st = Test(degree_list, size_list)
-#     is_simplicial, facets = st.is_simplicial()
-#     assert is_simplicial is True
-#     joint_seqs = compute_joint_seq(facets)
-#     assert if_facets_simplicial(facets) is True
-#     assert joint_seqs[0] == sorted(degree_list, reverse=True)
-#     assert joint_seqs[1] == sorted(size_list, reverse=True)
+def test_time_consuming_case():
+    r"""Plausible instance:
+        [[0, 1, 2, 3, 4, 5, 6],
+         [7, 8, 9, 10, 5, 3, 0],
+         [7, 6, 0, 5, 4, 3],
+         [7, 1, 0, 3, 5, 6],
+         [7, 1, 4, 2, 5],
+         [7, 1, 4, 3, 5],
+         [7, 1, 4, 6],
+         [7, 1, 4, 0],
+         [7, 2, 3],
+         [7, 2, 0],
+         [7, 2, 6],
+         [11, 2, 7],
+         [8, 2],
+         [8, 1]]
+
+    Notes
+    -----
+    This instance has st.s_depot.conv_time at roughly 123943 (~ 200 sec to compute).... recursive code
+
+    """
+    degree_list, size_list = ([11, 7, 7, 6, 6, 6, 6, 5, 3, 1, 1, 1], [7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2])
+    st = Test(degree_list, size_list)
+    is_simplicial, facets = st.is_simplicial()
+    assert is_simplicial is True
+    joint_seqs = compute_joint_seq(facets)
+    assert if_facets_simplicial(facets) is True
+    assert joint_seqs[0] == sorted(degree_list, reverse=True)
+    assert joint_seqs[1] == sorted(size_list, reverse=True)

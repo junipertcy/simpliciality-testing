@@ -75,7 +75,7 @@ class Test:
         self.blocked_sets = []
 
         self.depth = kwargs.pop("depth", np.infty)
-        self.width = kwargs.pop("width", 1e3)
+        self.width = kwargs.pop("width", 1e2)
         self.s_depot.cutoff = kwargs.pop("cutoff", 1e5)
         self.verbose = verbose
         if len(kwargs) > 0:
@@ -134,6 +134,8 @@ class Test:
                 tracker[equiv_class] += 1
                 weight += equiv_class[-1]
             heapq.heappush(h, (-weight, tuple(facet)))
+            # Might worth trying this for future improvements
+            # heapq.heappush(h, ([- weight, - sum(facet)], tuple(facet)))
         return h
 
     def sample_candidate_facet(self, size, valid_trials=None):
@@ -195,41 +197,39 @@ class Test:
         residual_sizes = self.size_list
         if np.sum(residual_sizes) == 0:
             raise SimplicialSignal([facet])  # Last facet explored.
+
+        # Validating the candidate facet.
         residual_degs, non_shielding_q = validators.get_residual_data(self.degree_list, facet)
         simplified_blocked_sets = simplify_blocked_sets(self.blocked_sets)
-
         if not validators.apply(residual_degs, residual_sizes, simplified_blocked_sets, non_shielding_q):
             return False
 
-        residual_degs_ = deepcopy(residual_degs)
-        residual_sizes_ = deepcopy(residual_sizes)
-        safe, data = validators.reduce(residual_degs_, residual_sizes_, [facet] + simplified_blocked_sets)
+        # Reducing the forced sets of nodes and facets.
+        safe, data = validators.reduce(residual_degs, residual_sizes, [facet] + simplified_blocked_sets)
         if not safe:
             return False
-        residual_degs, self.size_list, residual_blocked_sets, collected_facets, exempt_vids = data
-        if np.sum(self.size_list) == 0:
+        residual_degs, residual_sizes, residual_blocked_sets, collected_facets, exempt_vids = data
+        if np.sum(residual_sizes) == 0:
             raise SimplicialSignal([facet] + [exempt_vids] + collected_facets)
-
-        self.degree_list = sorted(residual_degs, reverse=True)
 
         self.s_depot.maps[self._level] = get_seq2seq_mapping(residual_degs)  # (mapping_forward, mapping_backward)
         self.s_depot.compute_lmap(self._level, self.s_depot.prev_d[self._level], self.s_depot.maps[self._level][0])
 
         b_new = transform_facets(residual_blocked_sets, self.s_depot.maps[self._level][0], to="l+1")
-        self.blocked_sets = sort_facets(b_new)
+        blocked_sets = sort_facets(b_new)
 
-        # remark: swap the last entry of _ with memo_blocked_sets and move the following section to
-        # just below the self.degree_list above, it becomes a tad more efficient. Not sure why.
-        _ = (tuple(self.degree_list), tuple(self.size_list), tuple(self.blocked_sets))
+        # We can make the algorithm faster by checking whether a branch is marked before we recursively explore it.
+        sorted_residual_degs = sorted(residual_degs, reverse=True)
+        _ = (tuple(sorted_residual_degs), tuple(residual_sizes), tuple(blocked_sets))
         if self.s_depot.explored[_]:
             self.s_depot.add_to_time_counter(self._level - 1, reason="reject")
             return False
         self.s_depot.explored[_] = True
+        self.degree_list, self.size_list, self.blocked_sets = sorted_residual_degs, residual_sizes, blocked_sets
         raise GoToNextLevel(facet, exempt_vids, collected_facets)
 
     def is_simplicial(self):
         if not validators.check_preconditions(self.degree_list, self.size_list):
-            self.s_depot.add_to_time_counter(0, reason="reject")
             return False, self.__mark(False, tuple())
         self.degree_list, self.size_list, num_ones = pair_one_by_one(self.degree_list, self.size_list)
         self.s_depot.collects[0] = [(len(self.degree_list) + _,) for _ in range(num_ones)]
@@ -291,7 +291,7 @@ class Test:
         self.s_depot.prev_b[self._level] = deepcopy(self.blocked_sets)
 
     def _verbose_logging(self):
-        if self.verbose and self._level >= 11:
+        if self.verbose:
             print(f"========== (l={self._level}) ==========\n"
                   f"Size list: {[_ for _ in self.size_list if _ > 0]}\n"
                   f"Degree list: {[_ for _ in self.degree_list if _ > 0]}\n"
