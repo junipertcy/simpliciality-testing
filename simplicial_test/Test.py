@@ -99,6 +99,7 @@ class Test:
             Facets that must be respected for non-inclusion.
 
         level_map : ``dict``
+            This dictionary translates a vertex id in the first stage (l=1) to that of the desired stage.
 
         Returns
         -------
@@ -112,27 +113,27 @@ class Test:
         level_map[vid] =  vtx index at current view.
 
         """
-        equiv2vid = defaultdict(list)
-        for vid, _ in enumerate(degs):
-            if level_map[vid] != -1:
-                key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[vid]) + [_])
-                equiv2vid[key] += [level_map[vid]]
-                equiv2vid["pool"] += [key]
-        equiv_class_pool = combinations(equiv2vid["pool"], size).__iter__()
-
         h = []
+        collection_keys = []
+        key2vid = defaultdict(list)
+        for ind_d1, d1 in enumerate(degs):
+            if level_map[ind_d1] != -1:
+                key = tuple(get_indices_of_k_in_blocked_sets(blocked_sets, level_map[ind_d1]) + [d1])
+                key2vid[key] += [level_map[ind_d1]]
+                collection_keys += [key]
+        candidates = combinations(collection_keys, size).__iter__()
         for _ in range(int(width)):
             facet = []
             tracker = defaultdict(int)
             weight = 0
             try:
-                candidate = next(equiv_class_pool)
+                candidate = next(candidates)
             except StopIteration:
                 break
-            for equiv_class in candidate:
-                facet += [equiv2vid[equiv_class][tracker[equiv_class]]]  # vids_same_equiv_class[tracker[equiv_class]]
-                tracker[equiv_class] += 1
-                weight += equiv_class[-1]
+            for key in candidate:
+                facet += [key2vid[key][tracker[key]]]
+                tracker[key] += 1
+                weight += key[-1]
             heapq.heappush(h, (-weight, tuple(facet)))
             # Might worth trying this for future improvements
             # heapq.heappush(h, ([- weight, - sum(facet)], tuple(facet)))

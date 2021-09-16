@@ -82,8 +82,6 @@ def rule_1(residual_degs, residual_sizes):
     -------
 
     """
-    if np.min(residual_degs) < 0:
-        return False
     cardinality_s = len(residual_sizes)
     cardinality_d = np.count_nonzero(residual_degs)
     if np.max(residual_degs) > cardinality_s:
@@ -158,7 +156,7 @@ def reduce(residual_degs, residual_sizes, blocked_sets) -> tuple:
 
     while counter_degs[len(residual_sizes)] > 0 and np.sum(residual_sizes) != 0:
         residual_sizes = [_ - counter_degs[len(residual_sizes)] for _ in residual_sizes]
-        if len(residual_sizes) > 1 and Counter(residual_sizes)[0] > 0:
+        if (len(residual_sizes) > 1 and Counter(residual_sizes)[0] > 0) or np.min(residual_sizes) < 0:
             return False, None
         exempt_vids += np.where(residual_degs == len(residual_sizes))[0].tolist()  # exempt vids
 
