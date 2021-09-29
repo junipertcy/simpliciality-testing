@@ -43,8 +43,8 @@ __author__ = """\n""".join([
     'Tzu-Chi Yen <tzuchi.yen@colorado.edu>',
 ])
 __URL__ = "https://docs.netscied.tw/simplicialTest/index.html"
-__version__ = '1.2.2'
-__release__ = '1.2'
+__version__ = '1.3.0'
+__release__ = '1.3'
 
 #  mark the class as not to be collected as pytest tests
 Test.__test__ = False

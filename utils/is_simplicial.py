@@ -34,7 +34,7 @@ except ModuleNotFoundError:
 @click.option('-k', '--degree_seq_file', 'degree_sequence', type=click.File('r'), help='Path to degree sequence file.')
 @click.option('-s', '--size_seq_file', 'size_sequence', type=click.File('r'), help='Path to size sequence file.')
 @click.option('-c', '--cutoff', 'cutoff', type=click.INT, help='Cutoff (max. steps) to the search.', default=1e5)
-@click.option('-w', '--width', 'width', type=click.INT, help='Search width (see the docs).', default=1e3)
+@click.option('-w', '--width', 'width', type=click.INT, help='Search width (see the docs).', default=1e2)
 @click.option('-d', '--depth', 'depth', type=click.INT, help='Backtrack depth (see the docs).', default=1e10)
 @click.option('--verbose', is_flag=True, help='Turn on the verbose mode.')
 def is_simplicial(degree_sequence, size_sequence, cutoff, width, depth, verbose):

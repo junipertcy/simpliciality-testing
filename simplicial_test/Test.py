@@ -22,7 +22,7 @@ from . import validators
 from .utils import *
 from .custom_exceptions import NoMoreBalls, SimplicialSignal, GoToNextLevel, NonSimplicialSignal
 from copy import deepcopy
-import heapq
+import heapq  # note that in Standard Library, heap queue = min-priority queue
 
 try:
     from sage.all import Combinations as combinations
@@ -122,7 +122,7 @@ class Test:
                 key2vid[key] += [level_map[ind_d1]]
                 collection_keys += [key]
         candidates = combinations(collection_keys, size).__iter__()
-        for _ in range(int(width)):
+        for entry_count in range(int(width)):
             facet = []
             tracker = defaultdict(int)
             weight = 0
@@ -134,9 +134,9 @@ class Test:
                 facet += [key2vid[key][tracker[key]]]
                 tracker[key] += 1
                 weight += key[-1]
-            heapq.heappush(h, (-weight, tuple(facet)))
-            # Might worth trying this for future improvements
-            # heapq.heappush(h, ([- weight, - sum(facet)], tuple(facet)))
+            # heapq.heappush(h, (entry_count, tuple(facet)))  # arXiv:2106.00185v1
+            heapq.heappush(h, (- weight, - sum(facet), entry_count, tuple(facet)))  # resubmitted version
+
         return h
 
     def sample_candidate_facet(self, size, valid_trials=None):
@@ -159,8 +159,8 @@ class Test:
         counter = 0
         while True:
             try:
-                facet = heapq.heappop(self.s_depot.valid_trials[self._level - 1])[1]  # candidate_facet
-            except (RuntimeError, IndexError):
+                facet = heapq.heappop(self.s_depot.valid_trials[self._level - 1])[-1]  # candidate_facet
+            except IndexError:
                 self.s_depot.add_to_time_counter(self._level - 1, reason="backtrack")
             else:
                 if validators.a_issubset_any_b(facet, self.blocked_sets):
