@@ -10,9 +10,9 @@
 
 This is the software repository behind the paper:
 
-* *Construction of Simplicial Complexes with Prescribed Degree-Size Sequences*, [Tzu-Chi Yen](https://junipertcy.info/) (2021).
+* *Construction of simplicial complexes with prescribed degree-size sequences*, published in Physical Review E **104**, L042303 (2021).
 
-Read it on: [arXiv:2106.00185](https://arxiv.org/abs/2106.00185).
+Read it on: [arXiv:2106.00185](https://arxiv.org/abs/2106.00185) or [Phys. Rev. E](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.104.L042303).
 
 * For full documentation, please visit [this site](https://docs.netscied.tw/simplicial-test/index.html).
 * For general Q&A, ideas, or other things, please visit [Discussions](https://github.com/junipertcy/simplicial-test/discussions).
